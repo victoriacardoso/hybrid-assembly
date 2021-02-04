@@ -1,0 +1,9 @@
+count=5
+data=Abyss.ctg.fa,title=Abyss
+data=Edena.ctg.fa,title=Edena
+data=SOAP.ctg.fa,title=SOAP
+data=CLC.ctg.fa,title=CLC
+data=Velvet.ctg.fa,title=Velvet
+min_length=100
+Master_file=Merged.ctg.fa
+Gap=11

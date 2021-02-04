@@ -1,0 +1,8 @@
+genome=4626205
+infile=Merged.ctg.fa
+outfile=CISA.ctg.fa
+nucmer=yourpath/nucmer
+R2_Gap=0.95
+CISA=yourpath/CISA1.3
+makeblastdb=yourpath/makeblastdb
+blastn=yourpath/blastn
