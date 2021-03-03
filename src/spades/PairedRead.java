@@ -1,12 +1,15 @@
 package spades;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-import org.apache.commons.exec.CommandLine;
-import org.apache.commons.exec.DefaultExecutor;
+import org.apache.commons.io.FileUtils;
 
 import database.DatabaseConnection;
 
@@ -63,36 +66,70 @@ public class PairedRead {
 
 				String forwardReads = "-1";
 				String reverseReads = "-2";
-
+				
+				PreparedStatement sta = null;
+				sta = DatabaseConnection.connect.prepareStatement(
+						"UPDATE project SET status =  'Running SPAdes' WHERE project.idproject=" + idproject + ";");
+				sta.executeUpdate();
+				
 				switch (orientation) {
 				case "fr":
 					String assemblyCommand = "python3 " + "/opt/SPAdes/bin/spades.py " + spades_options + " "
 							+ forwardReads + " " + output + "/1_treated.fastq" + " " + reverseReads + " " + output
 							+ "/2_treated.fastq" + " -k " + spades_kmers + " -m " + spades_memory + " -t "
 							+ spades_threads + " -o " + output + "/spades-assembly";
+					
+					Process p = Runtime.getRuntime().exec(assemblyCommand);
+					System.out.println("SPAdes assembly started...");
+					
+					BufferedReader br;
+					String linha;
 
-					CommandLine frSpades = CommandLine.parse(assemblyCommand);
-					DefaultExecutor frExecutor = new DefaultExecutor();
-					frExecutor.execute(frSpades);
+					br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+					PrintWriter pw = new PrintWriter(new FileWriter(output + "/log.txt"));
 
+					while ((linha = br.readLine()) != null) {
+						pw.println(linha);
+					}
+					pw.close();
+					p.waitFor();
+
+					new File(output + "/log.txt").delete();
+					br.close();
+					
 					break;
 				case "rf":
 					String assemblyCmmd = "python3 " + "/opt/SPAdes/bin/spades.py " + spades_options + " "
 							+ reverseReads + " " + output + "/1_treated.fastq" + " " + forwardReads + " " + output
 							+ "/2_treated.fastq" + " -k " + spades_kmers + " -m " + spades_memory + " -t "
 							+ spades_threads + " -o " + output + "spades-assembly";
+					
 
-					CommandLine rfSpades = CommandLine.parse(assemblyCmmd);
-					DefaultExecutor rfExecutor = new DefaultExecutor();
-					rfExecutor.execute(rfSpades);
-					break;
+					Process p2 = Runtime.getRuntime().exec(assemblyCmmd);
+										
+					BufferedReader br2;
+					String linha2;
+
+					br2 = new BufferedReader(new InputStreamReader(p2.getInputStream()));
+					PrintWriter pw2 = new PrintWriter(new FileWriter(output + "/log.txt"));
+
+					while ((linha2 = br2.readLine()) != null) {
+						pw2.println(linha2);
+					}
+					pw2.close();
+					p2.waitFor();
+
+					new File(output + "/log.txt").delete();
+					br2.close();
 				}
 				checkFileSpades(idproject);
-				PreparedStatement preparedStmt = null;
-				String result_spades = output + "/spades-assemby/scaffolds.fasta";
-				preparedStmt = DatabaseConnection.connect.prepareStatement("UPDATE organism SET result_spades= '"
-						+ result_spades + "' WHERE idproject=" + idproject + ";");
-				preparedStmt.executeUpdate();
+				
+				PreparedStatement statmt = null;
+				statmt = DatabaseConnection.connect
+						.prepareStatement("UPDATE project SET status =  'Complete SPAdes' WHERE project.idproject="
+								+ idproject + ";");
+				statmt.executeUpdate();
+				
 			}
 		} catch (Exception e) {
 			System.err.println(e.getClass().getName() + ": " + e.getMessage());
@@ -117,12 +154,16 @@ public class PairedRead {
 					System.out.println("SPAdes OK");
 				}
 				else {
+					File spadesDirectory = new File(output + "/spades-assembly");
+					FileUtils.deleteDirectory(spadesDirectory);
 					runSpades(idproject);
 
 				}
 
 			}
 			else {
+				File spadesDirectory = new File(output + "/spades-assembly");
+				FileUtils.deleteDirectory(spadesDirectory);
 				runSpades(idproject);
 			}
 

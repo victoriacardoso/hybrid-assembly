@@ -6,13 +6,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-import org.apache.commons.exec.CommandLine;
-import org.apache.commons.exec.DefaultExecuteResultHandler;
-import org.apache.commons.exec.DefaultExecutor;
 import org.apache.commons.exec.ExecuteException;
-import org.apache.commons.exec.ExecuteWatchdog;
+import org.apache.commons.io.FileUtils;
 
 import database.DatabaseConnection;
+import treat.Treatment;
 
 public class PairedRead {
 	private String paired1;
@@ -88,11 +86,19 @@ public class PairedRead {
 
 					String forwardReads = "-1";
 					String reverseReads = "-2";
-
-					treatRead(getPaired1(), getPaired2(), output + "/");
+					
+					PreparedStatement sta = null;
+					sta = DatabaseConnection.connect
+							.prepareStatement("UPDATE project SET status =  'Running Megahit' WHERE project.idproject="
+									+ idproject + ";");
+					sta.executeUpdate();
+					
+					Treatment treatment = new Treatment();
+					treatment.treatRead(getPaired1(), getPaired2(), output + "/");
 					Thread.sleep(120000);
 					checkTreatedFile(output + "/1_treated.fastq", output + "/2_treated.fastq", getPaired1(),
-							getPaired2(), output);
+							getPaired2(), output, treatment);
+					
 					switch (orientation) {
 
 					case "fr":
@@ -100,29 +106,32 @@ public class PairedRead {
 								+ "/1_treated.fastq" + " " + reverseReads + " " + output + "/2_treated.fastq"
 								+ " --mem-flag " + mem_flag + " --min-count " + min_count + " --k-list " + megahit_kmers
 								+ " -o " + output + "/megahit-assembly";
-
-						CommandLine frMegahit = CommandLine.parse(assemblyCommand);
-						DefaultExecutor frExecutor = new DefaultExecutor();
-						frExecutor.execute(frMegahit);
+						
+						System.out.println("Megahit assembly started...");
+						
+						Process p = Runtime.getRuntime().exec(assemblyCommand);
+						p.waitFor();
 
 						break;
 					case "rf":
 						String assemblyCmmd = "/opt/megahit/bin/megahit " + reverseReads + " " + output
 								+ "/1_treated.fastq" + " " + forwardReads + " " + output + "/2_treated.fastq" + " -o "
 								+ output + "/megahit-assembly";
-						CommandLine rfMegahit = CommandLine.parse(assemblyCmmd);
-						DefaultExecutor rfExecutor = new DefaultExecutor();
-						rfExecutor.execute(rfMegahit);
+						
+						System.out.println("Megahit assembly started...");
+						Process p2 = Runtime.getRuntime().exec(assemblyCmmd);
+						p2.waitFor();
+
 						break;
 
 					}
 					checkMegahitFile(idproject);
-
-					PreparedStatement preparedStmt = null;
-					String result_megahit = output + "/megahit-assemby/final.contigs.fa";
-					preparedStmt = DatabaseConnection.connect.prepareStatement("UPDATE organism SET result_megahit= '"
-							+ result_megahit + "' WHERE idproject=" + idproject + ";");
-					preparedStmt.executeUpdate();
+					
+					PreparedStatement stat = null;
+					stat = DatabaseConnection.connect
+							.prepareStatement("UPDATE project SET status =  'Complete Megahit' WHERE project.idproject="
+									+ idproject + ";");
+					stat.executeUpdate();
 
 				}
 			}
@@ -148,11 +157,15 @@ public class PairedRead {
 					if (a.length() > 0) {
 						System.out.println("Megahit OK");
 					} else {
+						File megahitDirectory = new File(output + "/megahit-assembly");
+						FileUtils.deleteDirectory(megahitDirectory);
 						runMegahit(idproject);
 
 					}
 
 				} else {
+					File megahitDirectory = new File(output + "/megahit-assembly");
+					FileUtils.deleteDirectory(megahitDirectory);
 					runMegahit(idproject);
 				}
 			}
@@ -161,18 +174,7 @@ public class PairedRead {
 		}
 	}
 
-	public void treatRead(String read1, String read2, String output) throws ExecuteException, IOException {
-		DefaultExecutor executor = new DefaultExecutor();
-		DefaultExecuteResultHandler rh = new DefaultExecuteResultHandler();
-		ExecuteWatchdog wd = new ExecuteWatchdog(ExecuteWatchdog.INFINITE_TIMEOUT);
-		String command15 = "lib/bbmap/repair.sh in1=" + read1 + " in2=" + read2 + " out1=" + output + "1_treated.fastq"
-				+ " out2=" + output + "2_treated.fastq repair";
-		CommandLine commandline5 = CommandLine.parse(command15);
-		executor.setWatchdog(wd);
-		executor.execute(commandline5, rh);
-	}
-
-	public void checkTreatedFile(String treated1, String treated2, String read1, String read2, String output)
+	public void checkTreatedFile(String treated1, String treated2, String read1, String read2, String output, Treatment treatment)
 			throws InterruptedException, ExecuteException, IOException {
 		File a = new File(treated1);
 		File a1 = new File(treated2);
@@ -181,10 +183,10 @@ public class PairedRead {
 			if (a.length() > 0 && a1.length() > 0) {
 				System.out.println("Treated files OK");
 			} else {
-				treatRead(read1, read2, output);
+				treatment.treatRead(read1, read2, output);
 			}
 		} else {
-			treatRead(read1, read2, output);
+			treatment.treatRead(read1, read2, output);
 
 		}
 	}

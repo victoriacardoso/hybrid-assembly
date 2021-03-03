@@ -443,9 +443,9 @@ public class Home {
 								runAgain(resulSet.getString("status"));
 								frm_Home.dispose();
 							}
-							if (resulSet.getString("status").equals("Running Ragoo")
+							if (resulSet.getString("status").equals("Running Mauve")
 									|| resulSet.getString("status").equals("Complete CISA")) {
-								File folderToDelete = new File(output + "/ragoo-output");
+								File folderToDelete = new File(output + "/Mauve");
 								FileUtils.deleteDirectory(folderToDelete);
 								File folderToDelete2 = new File(output + "/GenTreat");
 								FileUtils.deleteDirectory(folderToDelete2);
@@ -456,7 +456,7 @@ public class Home {
 								frm_Home.dispose();
 							}
 							if (resulSet.getString("status").equals("Running RAST")
-									|| resulSet.getString("status").equals("Complete Ragoo")) {
+									|| resulSet.getString("status").equals("Complete Mauve")) {
 								File folderToDelete = new File(output + "/RAST");
 								FileUtils.deleteDirectory(folderToDelete);
 								ProjectLog log = new ProjectLog();
@@ -604,11 +604,11 @@ public class Home {
 			new Thread(ProjectLog.t7).start();
 			new Thread(ProjectLog.t4).start();
 		}
-		if (status.equals("Complete CISA") || status.equals("Running Ragoo")) {
+		if (status.equals("Complete CISA") || status.equals("Running Mauve")) {
 			new Thread(ProjectLog.t7).start();
 			new Thread(ProjectLog.t5).start();
 		}
-		if (status.equals("Complete Ragoo") || status.equals("Running RAST")) {
+		if (status.equals("Complete Mauve") || status.equals("Running RAST")) {
 			new Thread(ProjectLog.t7).start();
 			new Thread(ProjectLog.t8).start();
 		}

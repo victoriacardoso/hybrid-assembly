@@ -8,7 +8,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -32,6 +31,8 @@ import javax.swing.table.DefaultTableModel;
 
 import cisa.Cisa;
 import database.DatabaseConnection;
+import log.Log;
+import log.Status;
 import mauve.Ordering;
 import megahit.PairedRead;
 import rast.Rast;
@@ -226,7 +227,7 @@ public class ProjectLog {
 					resulSet = statement.executeQuery(cmmd);
 
 					while (resulSet.next()) {
-						String output = resulSet.getString("output");
+						String output = resulSet.getString("output").trim().replace(" ", "");
 
 						File directory = new File(output);
 						directory.mkdir();
@@ -234,17 +235,20 @@ public class ProjectLog {
 					}
 				} else {
 					int idproject = 0;
+
 					Statement st = null;
 					st = DatabaseConnection.connect.createStatement();
 					idproject = st.executeQuery("select last_insert_rowid()").getInt(1);
+
 					Statement statement;
 					String cmmd;
 					ResultSet resulSet;
 					cmmd = "SELECT * FROM parameter WHERE idproject=" + idproject + ";";
 					statement = DatabaseConnection.connect.createStatement();
 					resulSet = statement.executeQuery(cmmd);
+
 					while (resulSet.next()) {
-						String output = resulSet.getString("output");
+						String output = resulSet.getString("output").trim().replace(" ", "");
 						File directory = new File(output);
 						directory.mkdir();
 					}
@@ -264,14 +268,14 @@ public class ProjectLog {
 		public void run() {
 			try {
 				if (id != null) {
-					startLogProject(Integer.parseInt(id));
+					startLogProject(Integer.parseInt(id), 0, 1, 2, 3, 4);
 				} else {
 					int idproject = 0;
 					Statement st = null;
 					st = DatabaseConnection.connect.createStatement();
 					idproject = st.executeQuery("select last_insert_rowid()").getInt(1);
 
-					startLogProject(idproject);
+					startLogProject(idproject, 0, 1, 2, 3, 4);
 				}
 
 			} catch (Exception e) {
@@ -284,6 +288,10 @@ public class ProjectLog {
 		@Override
 		public void run() {
 			try {
+				CustomPanel customPanel = new CustomPanel();
+				panel.add(customPanel);
+				customPanel.setBounds(236, 229, 125, 96);
+								
 				Statement stm = null;
 				String cmmdo;
 				ResultSet rst;
@@ -292,67 +300,42 @@ public class ProjectLog {
 				rst = stm.executeQuery(cmmdo);
 				while (rst.next()) {
 					String singleRead = rst.getString("single");
-					PreparedStatement sta = null;
+
 					if (singleRead != null) {
+						customPanel.addProgress(20);
 						SingleRead single = new SingleRead();
-
-						sta = DatabaseConnection.connect.prepareStatement(
-								"UPDATE project SET status =  'Running SPAdes' WHERE project.idproject=" + id + ";");
-						sta.executeUpdate();
-
 						single.runSpades(Integer.parseInt(id));
+						customPanel.addProgress(20);
 
-						PreparedStatement statmt = null;
-						statmt = DatabaseConnection.connect.prepareStatement(
-								"UPDATE project SET status =  'Complete SPAdes' WHERE project.idproject=" + id + ";");
-						statmt.executeUpdate();
 						Thread.sleep(10000);
 
 					} else {
+						customPanel.addProgress(20);
 						spades.PairedRead pairedRead = new spades.PairedRead();
-
-						sta = DatabaseConnection.connect.prepareStatement(
-								"UPDATE project SET status =  'Running SPAdes' WHERE project.idproject=" + id + ";");
-						sta.executeUpdate();
-
 						pairedRead.runSpades(Integer.parseInt(id));
+						customPanel.addProgress(20);
 
-						PreparedStatement statmt = null;
-						statmt = DatabaseConnection.connect.prepareStatement(
-								"UPDATE project SET status =  'Complete SPAdes' WHERE project.idproject=" + id + ";");
-						statmt.executeUpdate();
 						Thread.sleep(10000);
 					}
 				}
-				PreparedStatement statmnt = null;
-				statmnt = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status =  'Running CISA' WHERE project.idproject=" + id + ";");
-				statmnt.executeUpdate();
-
+				
 				Cisa cisa = new Cisa();
 				cisa.mergeFileRun(Integer.parseInt(id));
 				cisa.cisaFileRun(Integer.parseInt(id));
-				PreparedStatement stmt = null;
-				stmt = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status =  'Complete CISA' WHERE project.idproject=" + id + ";");
-				stmt.executeUpdate();
+				customPanel.addProgress(20);
+
 				Thread.sleep(20000);
 
-				PreparedStatement stmtOrder = null;
-				stmtOrder = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status =  'Running Mauve' WHERE project.idproject=" + id + ";");
-				stmtOrder.executeUpdate();
-				
 				Ordering ordering = new Ordering();
 				ordering.OrderContigs(id);
-				PreparedStatement stmtOrderFinish = null;
-				stmtOrderFinish = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status =  'Complete Mauve' WHERE project.idproject=" + id + ";");
-				stmtOrderFinish.executeUpdate();
+				customPanel.addProgress(20);
+
+
 				Thread.sleep(20000);
 
 				Rast rast = new Rast();
 				rast.submitRast(Integer.parseInt(id));
+				customPanel.addProgress(20);
 
 			} catch (Exception e) {
 				System.err.println(e.getClass().getName() + ": " + e.getMessage());
@@ -364,34 +347,28 @@ public class ProjectLog {
 		@Override
 		public void run() {
 			try {
-				PreparedStatement statmnt = null;
-				statmnt = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status =  'Running CISA' WHERE project.idproject=" + id + ";");
-				statmnt.executeUpdate();
-
+				CustomPanel customPanel = new CustomPanel();
+				panel.add(customPanel);
+				customPanel.setBounds(236, 229, 125, 96);
+				
+				customPanel.addProgress(40);
+				
 				Cisa cisa = new Cisa();
 				cisa.mergeFileRun(Integer.parseInt(id));
 				cisa.cisaFileRun(Integer.parseInt(id));
-				PreparedStatement stmt = null;
-				stmt = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status =  'Complete CISA' WHERE project.idproject=" + id + ";");
-				stmt.executeUpdate();
+				customPanel.addProgress(20);
+
 				Thread.sleep(20000);
 
-				PreparedStatement stmtOrder = null;
-				stmtOrder = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status =  'Running Mauve' WHERE project.idproject=" + id + ";");
-				stmtOrder.executeUpdate();
 				Ordering ordering = new Ordering();
 				ordering.OrderContigs(id);
-				PreparedStatement stmtOrderFinish = null;
-				stmtOrderFinish = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status =  'Complete Mauve' WHERE project.idproject=" + id + ";");
-				stmtOrderFinish.executeUpdate();
+				customPanel.addProgress(20);
+
 				Thread.sleep(20000);
 
 				Rast rast = new Rast();
 				rast.submitRast(Integer.parseInt(id));
+				customPanel.addProgress(20);
 
 			} catch (Exception e) {
 				System.err.println(e.getClass().getName() + ": " + e.getMessage());
@@ -403,40 +380,53 @@ public class ProjectLog {
 		@Override
 		public void run() {
 			try {
-				PreparedStatement stmtOrder = null;
-				stmtOrder = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status =  'Running Mauve' WHERE project.idproject=" + id + ";");
-				stmtOrder.executeUpdate();
+				CustomPanel customPanel = new CustomPanel();
+				panel.add(customPanel);
+				customPanel.setBounds(236, 229, 125, 96);
+				
+				customPanel.addProgress(60);
 				Ordering ordering = new Ordering();
 				ordering.OrderContigs(id);
-				PreparedStatement stmtOrderFinish = null;
-				stmtOrderFinish = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status =  'Complete Mauve' WHERE project.idproject=" + id + ";");
-				stmtOrderFinish.executeUpdate();
+				customPanel.addProgress(20);
+
 				Thread.sleep(20000);
 
 				Rast rast = new Rast();
 				rast.submitRast(Integer.parseInt(id));
+				customPanel.addProgress(20);
 
 			} catch (Exception e) {
 				System.err.println(e.getClass().getName() + ": " + e.getMessage());
 			}
-		}
-	};
-	public static Runnable t6 = new Runnable() {
-
-		@Override
-		public void run() {
-			try {
-				Rast rast = new Rast();
-				rast.submitRast(Integer.parseInt(id));
-			} catch (Exception e) {
-				System.err.println(e.getClass().getName() + ": " + e.getMessage());
-			}
-
 		}
 	};
 	public static Runnable t7 = new Runnable() {
+
+		@Override
+		public void run() {
+			Status status = new Status();
+			
+			try {
+				if (status.checkStatus(Integer.parseInt(id)).equals("Running SPAdes") || status.checkStatus(Integer.parseInt(id)).equals("Complete Megahit")) {
+					startLogProject(Integer.parseInt(id), 0, 0, 1, 2, 3);
+				}
+				if (status.checkStatus(Integer.parseInt(id)).equals("Running CISA") || status.checkStatus(Integer.parseInt(id)).equals("Complete SPAdes")) {
+					startLogProject(Integer.parseInt(id), 0, 0, 0, 1, 2);
+				}
+				if (status.checkStatus(Integer.parseInt(id)).equals("Running Mauve") || status.checkStatus(Integer.parseInt(id)).equals("Complete CISA")) {
+					startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 1);
+				}
+				if (status.checkStatus(Integer.parseInt(id)).equals("Running RAST") || status.checkStatus(Integer.parseInt(id)).equals("Complete Mauve")) {
+					startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 0);
+				}
+			} catch (NumberFormatException | SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+	};
+	public static Runnable t8 = new Runnable() {
 
 		@Override
 		public void run() {
@@ -445,361 +435,6 @@ public class ProjectLog {
 				panel.add(customPanel);
 				customPanel.setBounds(236, 229, 125, 96);
 
-				Date date = new Date();
-				DateFormat dateFormat = DateFormat.getInstance();
-				String startDate = dateFormat.format(date);
-
-				Statement st;
-				String cmd;
-				ResultSet resultSet;
-				cmd = "SELECT * FROM project WHERE project.idproject=" + id + ";";
-				st = DatabaseConnection.connect.createStatement();
-				resultSet = st.executeQuery(cmd);
-				while (resultSet.next()) {
-					String initialStatus = resultSet.getString("status");
-					setStatus(initialStatus);
-				}
-
-				if (getStatus().equals("Running SPAdes")) {
-					dft.addRow(new Object[][] { { null, null, null } });
-					customPanel.addProgress(20);
-
-					do {
-						Statement statement;
-						String cmmd;
-						ResultSet resulSet;
-						cmmd = "SELECT * FROM project WHERE project.idproject=" + id + ";";
-						statement = DatabaseConnection.connect.createStatement();
-						resulSet = statement.executeQuery(cmmd);
-						while (resulSet.next()) {
-
-							String status = resulSet.getString("status");
-							setStatus(status);
-
-							dft.setValueAt("Running SPAdes", 0, 0);
-							dft.setValueAt(startDate, 0, 1);
-							Thread.sleep(30000);
-						}
-					} while (getStatus().equals("Running SPAdes"));
-
-					Date date0 = new Date();
-					DateFormat dateFormat1 = DateFormat.getInstance();
-					String finishedDateSpades = dateFormat1.format(date0);
-					dft.setValueAt("Complete SPAdes", 0, 0);
-					customPanel.addProgress(20);
-
-					dft.setValueAt(finishedDateSpades, 0, 2);
-					Thread.sleep(10000);
-
-					dft.addRow(new Object[][] { { null, null, null } });
-					do {
-						Statement statement;
-						String cmmd;
-						ResultSet resulSet;
-						cmmd = "SELECT * FROM project WHERE project.idproject=" + id + ";";
-						statement = DatabaseConnection.connect.createStatement();
-						resulSet = statement.executeQuery(cmmd);
-						while (resulSet.next()) {
-							String status = resulSet.getString("status");
-							setStatus(status);
-
-							dft.setValueAt("Running CISA", 1, 0);
-							dft.setValueAt(finishedDateSpades, 1, 1);
-							Thread.sleep(30000);
-						}
-					} while (getStatus().equals("Running CISA"));
-					customPanel.addProgress(20);
-					Date date000 = new Date();
-					DateFormat df = DateFormat.getInstance();
-					String finishedDateCisa = df.format(date000);
-					dft.setValueAt("Complete CISA", 1, 0);
-					dft.setValueAt(finishedDateCisa, 1, 2);
-
-					dft.addRow(new Object[][] { { null, null, null } });
-					do {
-						Statement statement;
-						String cmmd;
-						ResultSet resulSet;
-						cmmd = "SELECT * FROM project WHERE project.idproject=" + id + ";";
-						statement = DatabaseConnection.connect.createStatement();
-						resulSet = statement.executeQuery(cmmd);
-						while (resulSet.next()) {
-							String status = resulSet.getString("status");
-							setStatus(status);
-							dft.setValueAt("Running Mauve", 2, 0);
-							dft.setValueAt(finishedDateCisa, 2, 1);
-
-							Thread.sleep(30000);
-						}
-					} while (getStatus().equals("Running Mauve"));
-					customPanel.addProgress(20);
-					Date date0000 = new Date();
-					DateFormat df0 = DateFormat.getInstance();
-					String finishedDateRagoo = df0.format(date0000);
-
-					dft.setValueAt("Complete Mauve", 2, 0);
-					dft.setValueAt(finishedDateRagoo, 2, 2);
-					dft.addRow(new Object[][] { { null, null, null } });
-
-					do {
-						Statement statement;
-						String cmmd;
-						ResultSet resulSet;
-						cmmd = "SELECT * FROM project WHERE project.idproject=" + id + ";";
-						statement = DatabaseConnection.connect.createStatement();
-						resulSet = statement.executeQuery(cmmd);
-						while (resulSet.next()) {
-							String status = resulSet.getString("status");
-							setStatus(status);
-
-							dft.setValueAt("Running RAST", 3, 0);
-							dft.setValueAt(finishedDateRagoo, 3, 1);
-							Thread.sleep(30000);
-						}
-					} while (getStatus().equals("Running RAST"));
-					customPanel.addProgress(20);
-
-					Date date00000 = new Date();
-					DateFormat df00 = DateFormat.getInstance();
-					String finishedDateRast = df00.format(date00000);
-					dft.setValueAt("Complete RAST", 3, 0);
-					dft.setValueAt(finishedDateRast, 3, 2);
-
-					Statement statement = null;
-					String command;
-					ResultSet rs;
-					command = "SELECT * FROM parameter WHERE idproject =" + id + ";";
-					statement = DatabaseConnection.connect.createStatement();
-					rs = statement.executeQuery(command);
-					while (rs.next()) {
-
-						String output = rs.getString("output");
-
-						emptyField.setText(output);
-						dialog.setVisible(true);
-					}
-				}
-				if (status.equals("Running CISA")) {
-					dft.addRow(new Object[][] { { null, null, null } });
-					customPanel.addProgress(40);
-
-					Date date0 = new Date();
-					DateFormat dateFormat1 = DateFormat.getInstance();
-					String finishedDateSpades = dateFormat1.format(date0);
-					do {
-						Statement statement;
-						String cmmd;
-						ResultSet resulSet;
-						cmmd = "SELECT * FROM project WHERE project.idproject=" + id + ";";
-						statement = DatabaseConnection.connect.createStatement();
-						resulSet = statement.executeQuery(cmmd);
-						while (resulSet.next()) {
-							String status = resulSet.getString("status");
-							setStatus(status);
-							dft.setValueAt("Running CISA", 0, 0);
-							dft.setValueAt(finishedDateSpades, 0, 1);
-
-							Thread.sleep(30000);
-						}
-
-					} while (getStatus().equals("Running CISA"));
-					customPanel.addProgress(20);
-
-					Date date000 = new Date();
-					DateFormat df = DateFormat.getInstance();
-					String finishedDateCisa = df.format(date000);
-					dft.setValueAt("Complete CISA", 0, 0);
-					dft.setValueAt(finishedDateCisa, 0, 2);
-
-					dft.addRow(new Object[][] { { null, null, null } });
-
-					do {
-						dft.setValueAt("Running Mauve", 1, 0);
-						dft.setValueAt(finishedDateCisa, 1, 1);
-						Statement statement;
-						String cmmd;
-						ResultSet resulSet;
-						cmmd = "SELECT * FROM project WHERE project.idproject=" + id + ";";
-						statement = DatabaseConnection.connect.createStatement();
-						resulSet = statement.executeQuery(cmmd);
-						while (resulSet.next()) {
-							String status = resulSet.getString("status");
-							setStatus(status);
-							Thread.sleep(30000);
-						}
-
-					} while (getStatus().equals("Running Mauve"));
-					customPanel.addProgress(20);
-					Date date0000 = new Date();
-					DateFormat df0 = DateFormat.getInstance();
-					String finishedDateRagoo = df0.format(date0000);
-
-					dft.setValueAt("Complete Mauve", 1, 0);
-					dft.setValueAt(finishedDateRagoo, 1, 2);
-					dft.addRow(new Object[][] { { null, null, null } });
-
-					do {
-						Statement statement;
-						String cmmd;
-						ResultSet resulSet;
-						cmmd = "SELECT * FROM project WHERE project.idproject=" + id + ";";
-						statement = DatabaseConnection.connect.createStatement();
-						resulSet = statement.executeQuery(cmmd);
-						while (resulSet.next()) {
-
-							String status = resulSet.getString("status");
-							setStatus(status);
-							dft.setValueAt("Running RAST", 2, 0);
-							dft.setValueAt(finishedDateRagoo, 2, 1);
-							Thread.sleep(30000);
-						}
-					} while (getStatus().equals("Running RAST"));
-					customPanel.addProgress(20);
-
-					Date date000000 = new Date();
-					DateFormat df000 = DateFormat.getInstance();
-					String finishedDateRast = df000.format(date000000);
-					dft.setValueAt("Complete RAST", 2, 0);
-					dft.setValueAt(finishedDateRast, 2, 2);
-
-					Statement statement = null;
-					String command;
-					ResultSet rs;
-					command = "SELECT * FROM parameter WHERE idproject =" + id + ";";
-					statement = DatabaseConnection.connect.createStatement();
-					rs = statement.executeQuery(command);
-
-					while (rs.next()) {
-						String output = rs.getString("output");
-
-						emptyField.setText(output);
-						dialog.setVisible(true);
-					}
-				}
-				if (getStatus().equals("Running Mauve")) {
-					dft.addRow(new Object[][] { { null, null, null } });
-					Date date000 = new Date();
-					DateFormat df = DateFormat.getInstance();
-					String finishedDateCisa = df.format(date000);
-					customPanel.addProgress(60);
-
-					do {
-						Statement statement;
-						String cmmd;
-						ResultSet resulSet;
-						cmmd = "SELECT * FROM project WHERE project.idproject=" + id + ";";
-						statement = DatabaseConnection.connect.createStatement();
-						resulSet = statement.executeQuery(cmmd);
-						while (resulSet.next()) {
-							String status = resulSet.getString("status");
-							setStatus(status);
-							dft.setValueAt("Running Mauve", 0, 0);
-							dft.setValueAt(finishedDateCisa, 0, 1);
-
-							Thread.sleep(30000);
-						}
-					} while (getStatus().equals("Running Mauve"));
-					customPanel.addProgress(20);
-					Date date0000 = new Date();
-					DateFormat df0 = DateFormat.getInstance();
-					String finishedDateRagoo = df0.format(date0000);
-
-					dft.setValueAt("Complete Mauve", 0, 0);
-					dft.setValueAt(finishedDateRagoo, 0, 2);
-					dft.addRow(new Object[][] { { null, null, null } });
-
-					do {
-						Statement statement;
-						String cmmd;
-						ResultSet resulSet;
-						cmmd = "SELECT * FROM project WHERE project.idproject=" + id + ";";
-						statement = DatabaseConnection.connect.createStatement();
-						resulSet = statement.executeQuery(cmmd);
-						while (resulSet.next()) {
-							String status = resulSet.getString("status");
-							setStatus(status);
-							dft.setValueAt("Running RAST", 1, 0);
-							dft.setValueAt(finishedDateRagoo, 1, 1);
-							Thread.sleep(30000);
-						}
-					} while (getStatus().equals("Running RAST"));
-					customPanel.addProgress(20);
-
-					Date date000000 = new Date();
-					DateFormat df000 = DateFormat.getInstance();
-					String finishedDateRast = df000.format(date000000);
-					dft.setValueAt("Complete RAST", 1, 0);
-					dft.setValueAt(finishedDateRast, 1, 2);
-
-					Statement statement = null;
-					String command;
-					ResultSet rs;
-					command = "SELECT * FROM parameter WHERE idproject =" + id + ";";
-					statement = DatabaseConnection.connect.createStatement();
-					rs = statement.executeQuery(command);
-					while (rs.next()) {
-						String output = rs.getString("output");
-
-						emptyField.setText(output);
-						dialog.setVisible(true);
-					}
-				}
-				if (getStatus().equals("Running RAST")) {
-					dft.addRow(new Object[][] { { null, null, null } });
-					Date date0000 = new Date();
-					DateFormat df0 = DateFormat.getInstance();
-					String finishedDateRagoo = df0.format(date0000);
-					customPanel.addProgress(80);
-
-					do {
-						Statement statement;
-						String cmmd;
-						ResultSet resulSet;
-						cmmd = "SELECT * FROM project WHERE project.idproject=" + id + ";";
-						statement = DatabaseConnection.connect.createStatement();
-						resulSet = statement.executeQuery(cmmd);
-						while (resulSet.next()) {
-
-							String status = resulSet.getString("status");
-							setStatus(status);
-							dft.setValueAt("Running RAST", 0, 0);
-							dft.setValueAt(finishedDateRagoo, 0, 1);
-
-							Thread.sleep(30000);
-						}
-					} while (getStatus().equals("Running RAST"));
-					customPanel.addProgress(20);
-
-					Date date000000 = new Date();
-					DateFormat df000 = DateFormat.getInstance();
-					String finishedDateRast = df000.format(date000000);
-					dft.setValueAt("Complete RAST", 0, 0);
-					dft.setValueAt(finishedDateRast, 0, 2);
-					Statement statement = null;
-					String command;
-					ResultSet rs;
-					command = "SELECT * FROM parameter WHERE idproject =" + id + ";";
-					statement = DatabaseConnection.connect.createStatement();
-					rs = statement.executeQuery(command);
-					while (rs.next()) {
-
-						String output = rs.getString("output");
-
-						emptyField.setText(output);
-						dialog.setVisible(true);
-					}
-				}
-
-			} catch (SQLException | NumberFormatException | InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-	};
-	public static Runnable t8 = new Runnable() {
-
-		@Override
-		public void run() {
-			try {
 				Rast rast = new Rast();
 				Statement statement;
 				String cmmd;
@@ -812,10 +447,14 @@ public class ProjectLog {
 					String job_id = resulSet.getString("job_id");
 
 					if (job_id != null) {
+						customPanel.addProgress(80);
 						rast.statusRast(Integer.parseInt(id));
-					}
-					else {
+						customPanel.addProgress(20);
+					} else {
+						customPanel.addProgress(80);
 						rast.submitRast(Integer.parseInt(id));
+						customPanel.addProgress(20);
+
 					}
 				}
 			} catch (Exception e) {
@@ -824,158 +463,87 @@ public class ProjectLog {
 		}
 	};
 
-	public static void startLogProject(int idproject) {
+	public static void startLogProject(int idproject, int rowMegahit, int rowSpades, int rowCisa, int rowMauve,
+			int rowRast) {
 		try {
-			CustomPanel customPanel = new CustomPanel();
-			panel.add(customPanel);
-			customPanel.setBounds(236, 229, 125, 96);
+			Status status = new Status();
+			String checkStatus = status.checkStatus(idproject);
+			
+			if (checkStatus.equals("Running Megahit")) {
+				Log log = new Log();
+				log.runMegahitLog(dft);
 
-			Date date = new Date();
-			DateFormat dateFormat = DateFormat.getInstance();
-			String startDate = dateFormat.format(date);
-			do {
-				Statement statement;
-				String cmmd;
-				ResultSet resulSet;
-				cmmd = "SELECT * FROM project WHERE idproject=" + idproject + ";";
-				statement = DatabaseConnection.connect.createStatement();
+				while (status.checkStatus(idproject).equals("Running Megahit")) {
+					Thread.sleep(30000);
+				}
+				Date date0 = new Date();
+				DateFormat dateFormat1 = DateFormat.getInstance();
+				String finishedDate = dateFormat1.format(date0);
+				dft.setValueAt("Complete Megahit", rowMegahit, 0);
+				dft.setValueAt(finishedDate, rowMegahit, 2);
+				Thread.sleep(30000);
+			}
 
-				resulSet = statement.executeQuery(cmmd);
+			if (status.checkStatus(idproject).equals("Running SPAdes")) {
+				Log log = new Log();
+				log.runSpadesLog(dft);
 
-				while (resulSet.next()) {
-					String status = resulSet.getString("status");
-					setStatus(status);
-		
-					dft.setNumRows(1);
-					dft.setValueAt("Running Megahit", 0, 0);
-					dft.setValueAt(startDate, 0, 1);
+				while (status.checkStatus(idproject).equals("Running SPAdes")) {
+					Thread.sleep(30000);
+				}
+				Date date00 = new Date();
+				DateFormat dateFormat00 = DateFormat.getInstance();
+				String finishedDateSpades = dateFormat00.format(date00);
+				dft.setValueAt("Complete Spades", rowSpades, 0);
+				dft.setValueAt(finishedDateSpades, rowSpades, 2);
+				Thread.sleep(30000);
+			}
+			if (status.checkStatus(idproject).equals("Running CISA")) {
+				Log log = new Log();
+				log.runCisaLog(dft);
 
+				while (status.checkStatus(idproject).equals("Running CISA")) {
+					Thread.sleep(30000);
+
+				}
+
+				Date date000 = new Date();
+				DateFormat df = DateFormat.getInstance();
+				String finishedDateCisa = df.format(date000);
+				dft.setValueAt("Complete CISA", rowCisa, 0);
+				dft.setValueAt(finishedDateCisa, rowCisa, 2);
+				Thread.sleep(30000);
+			}
+
+			if (status.checkStatus(idproject).equals("Running Mauve")) {
+				Log log = new Log();
+				log.runMauveLog(dft);
+
+				while (status.checkStatus(idproject).equals("Running Mauve")) {
 					Thread.sleep(30000);
 				}
 
-			} while (getStatus().equals("Running Megahit"));
-			customPanel.addProgress(20);
+				Date date0000 = new Date();
+				DateFormat df0 = DateFormat.getInstance();
+				String finishedDateRagoo = df0.format(date0000);
+				dft.setValueAt("Complete Mauve", rowMauve, 0);
+				dft.setValueAt(finishedDateRagoo, rowMauve, 2);
+				Thread.sleep(30000);
+			}
 
-			Date date0 = new Date();
-			DateFormat dateFormat1 = DateFormat.getInstance();
-			String finishedDate = dateFormat1.format(date0);
-			dft.setValueAt("Complete Megahit", 0, 0);
+			if (status.checkStatus(idproject).equals("Running RAST")) {
+				Log log = new Log();
+				log.runRastLog(dft);
 
-			dft.setValueAt(finishedDate, 0, 2);
-			Thread.sleep(10000);
-			dft.addRow(new Object[][] { { null, null, null } });
-
-			do {
-
-				Statement statement;
-				String cmmd;
-				ResultSet resulSet;
-				cmmd = "SELECT * FROM project WHERE idproject=" + idproject + ";";
-				statement = DatabaseConnection.connect.createStatement();
-
-				resulSet = statement.executeQuery(cmmd);
-				while (resulSet.next()) {
-
-					String status = resulSet.getString("status");
-					setStatus(status);
-					dft.setValueAt("Running SPades", 1, 0);
-					dft.setValueAt(finishedDate, 1, 1);
+				while (status.checkStatus(idproject).equals("Running RAST")) {
 					Thread.sleep(30000);
 				}
-			} while (getStatus().equals("Running SPAdes"));
-			customPanel.addProgress(20);
-
-			Date date00 = new Date();
-			DateFormat dateFormat00 = DateFormat.getInstance();
-			String finishedDateSpades = dateFormat00.format(date00);
-			dft.setValueAt("Complete Spades", 1, 0);
-			dft.setValueAt(finishedDateSpades, 1, 2);
-
-			dft.addRow(new Object[][] { { null, null, null } });
-
-			do {
-
-				Statement statement;
-				String cmmd;
-				ResultSet resulSet;
-				cmmd = "SELECT * FROM project WHERE project.idproject=" + idproject + ";";
-				statement = DatabaseConnection.connect.createStatement();
-				resulSet = statement.executeQuery(cmmd);
-				while (resulSet.next()) {
-					String status = resulSet.getString("status");
-					setStatus(status);
-					dft.setValueAt("Running CISA", 2, 0);
-					dft.setValueAt(finishedDateSpades, 2, 1);
-					Thread.sleep(30000);
-				}
-
-			} while (getStatus().equals("Running CISA"));
-			customPanel.addProgress(20);
-
-			Date date000 = new Date();
-			DateFormat df = DateFormat.getInstance();
-			String finishedDateCisa = df.format(date000);
-			dft.setValueAt("Complete CISA", 2, 0);
-			dft.setValueAt(finishedDateCisa, 2, 2);
-
-			dft.addRow(new Object[][] { { null, null, null } });
-
-			do {
-
-				Statement statement;
-				String cmmd;
-				ResultSet resulSet;
-				cmmd = "SELECT * FROM project WHERE project.idproject=" + idproject + ";";
-				statement = DatabaseConnection.connect.createStatement();
-				resulSet = statement.executeQuery(cmmd);
-
-				while (resulSet.next()) {
-					String status = resulSet.getString("status");
-					setStatus(status);
-
-					dft.setValueAt("Running Mauve", 3, 0);
-					dft.setValueAt(finishedDateCisa, 3, 1);
-
-					Thread.sleep(30000);
-				}
-			} while (getStatus().equals("Running Mauve"));
-			customPanel.addProgress(20);
-
-			Date date0000 = new Date();
-			DateFormat df0 = DateFormat.getInstance();
-			String finishedDateRagoo = df0.format(date0000);
-
-			dft.setValueAt("Complete Mauve", 3, 0);
-			dft.setValueAt(finishedDateRagoo, 3, 2);
-
-			dft.addRow(new Object[][] { { null, null, null } });
-
-			do {
-
-				Statement statement;
-				String cmmd;
-				ResultSet resulSet;
-				cmmd = "SELECT * FROM project WHERE idproject=" + idproject + ";";
-				statement = DatabaseConnection.connect.createStatement();
-				resulSet = statement.executeQuery(cmmd);
-
-				while (resulSet.next()) {
-					String status = resulSet.getString("status");
-					setStatus(status);
-
-					dft.setValueAt("Running RAST", 4, 0);
-					dft.setValueAt(finishedDateRagoo, 4, 1);
-					Thread.sleep(30000);
-				}
-			} while (getStatus().equals("Running RAST"));
-
-			customPanel.addProgress(20);
-
-			Date date00000 = new Date();
-			DateFormat df00 = DateFormat.getInstance();
-			String finishedDateRast = df00.format(date00000);
-			dft.setValueAt("Complete RAST", 4, 0);
-			dft.setValueAt(finishedDateRast, 4, 2);
+				Date date00000 = new Date();
+				DateFormat df00 = DateFormat.getInstance();
+				String finishedDateRast = df00.format(date00000);
+				dft.setValueAt("Complete RAST", rowRast, 0);
+				dft.setValueAt(finishedDateRast, rowRast, 2);
+			}
 
 			Statement statement = null;
 			String command;
@@ -983,15 +551,13 @@ public class ProjectLog {
 			command = "SELECT * FROM parameter WHERE idproject =" + idproject + ";";
 			statement = DatabaseConnection.connect.createStatement();
 			resultSet = statement.executeQuery(command);
+			String output = null;
 
 			while (resultSet.next()) {
-
-				String output = resultSet.getString("output");
-
-				emptyField.setText(output);
-				dialog.setVisible(true);
-
+				output = resultSet.getString("output");
 			}
+			emptyField.setText(output);
+			dialog.setVisible(true);
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -1007,102 +573,57 @@ public class ProjectLog {
 			cmmdo = "SELECT * FROM organism WHERE idproject=" + idproject + ";";
 			stm = DatabaseConnection.connect.createStatement();
 			rst = stm.executeQuery(cmmdo);
+			
+			CustomPanel customPanel = new CustomPanel();
+			panel.add(customPanel);
+			customPanel.setBounds(236, 229, 125, 96);
 
 			while (rst.next()) {
 				String singleRead = rst.getString("single");
 
 				if ((singleRead != null)) {
-					PreparedStatement statement = null;
-					statement = DatabaseConnection.connect
-							.prepareStatement("UPDATE project SET status =  'Running Megahit' WHERE project.idproject="
-									+ idproject + ";");
-					statement.executeUpdate();
-
 					megahit.SingleRead megahitSingle = new megahit.SingleRead();
 					megahitSingle.runMegahit(idproject);
-
-					PreparedStatement stat = null;
-					stat = DatabaseConnection.connect
-							.prepareStatement("UPDATE project SET status =  'Complete Megahit' WHERE project.idproject="
-									+ idproject + ";");
-					stat.executeUpdate();
+					customPanel.addProgress(20);
+					
 					Thread.sleep(20000);
 
 					SingleRead single = new SingleRead();
-					PreparedStatement sta = null;
-					sta = DatabaseConnection.connect.prepareStatement(
-							"UPDATE project SET status =  'Running SPAdes' WHERE project.idproject=" + idproject + ";");
-					sta.executeUpdate();
-
 					single.runSpades(idproject);
+					customPanel.addProgress(20);
 
-					PreparedStatement statmt = null;
-					statmt = DatabaseConnection.connect
-							.prepareStatement("UPDATE project SET status =  'Complete SPAdes' WHERE project.idproject="
-									+ idproject + ";");
-					statmt.executeUpdate();
 					Thread.sleep(10000);
 
 				} else {
-					PreparedStatement statement = null;
-					statement = DatabaseConnection.connect
-							.prepareStatement("UPDATE project SET status =  'Running Megahit' WHERE project.idproject="
-									+ idproject + ";");
-					statement.executeUpdate();
 					PairedRead paired = new PairedRead();
 					paired.runMegahit(idproject);
-					PreparedStatement stat = null;
-					stat = DatabaseConnection.connect
-							.prepareStatement("UPDATE project SET status =  'Complete Megahit' WHERE project.idproject="
-									+ idproject + ";");
-					stat.executeUpdate();
+					customPanel.addProgress(20);
+
 					Thread.sleep(20000);
 
 					spades.PairedRead pairedspades = new spades.PairedRead();
-					PreparedStatement sta = null;
-					sta = DatabaseConnection.connect.prepareStatement(
-							"UPDATE project SET status =  'Running SPAdes' WHERE project.idproject=" + idproject + ";");
-					sta.executeUpdate();
-
 					pairedspades.runSpades(idproject);
-
-					PreparedStatement statmt = null;
-					statmt = DatabaseConnection.connect
-							.prepareStatement("UPDATE project SET status =  'Complete SPAdes' WHERE project.idproject="
-									+ idproject + ";");
-					statmt.executeUpdate();
+					customPanel.addProgress(20);
 
 					Thread.sleep(10000);
 				}
 			}
-			PreparedStatement statmnt = null;
-			statmnt = DatabaseConnection.connect.prepareStatement(
-					"UPDATE project SET status =  'Running CISA' WHERE project.idproject=" + idproject + ";");
-			statmnt.executeUpdate();
-
 			Cisa cisa = new Cisa();
 			cisa.mergeFileRun(idproject);
 			cisa.cisaFileRun(idproject);
-			PreparedStatement stmt = null;
-			stmt = DatabaseConnection.connect.prepareStatement(
-					"UPDATE project SET status =  'Complete CISA' WHERE project.idproject=" + idproject + ";");
-			stmt.executeUpdate();
+			customPanel.addProgress(20);
+
 			Thread.sleep(20000);
 
-			PreparedStatement stmtOrder = null;
-			stmtOrder = DatabaseConnection.connect.prepareStatement(
-					"UPDATE project SET status =  'Running Mauve' WHERE project.idproject=" + idproject + ";");
-			stmtOrder.executeUpdate();
 			Ordering ordering = new Ordering();
 			ordering.OrderContigs(id);
-			PreparedStatement stmtOrderFinish = null;
-			stmtOrderFinish = DatabaseConnection.connect.prepareStatement(
-					"UPDATE project SET status =  'Complete Mauve' WHERE project.idproject=" + idproject + ";");
-			stmtOrderFinish.executeUpdate();
+			customPanel.addProgress(20);
+
 			Thread.sleep(20000);
 
 			Rast rast = new Rast();
 			rast.submitRast(idproject);
+			customPanel.addProgress(20);
 
 		}
 

@@ -325,7 +325,7 @@ public class Input {
 		button_ReferenceFile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				fileChooser = new JFileChooser();
-				fileChooser.addChoosableFileFilter(new FileNameExtensionFilter("FASTA FILES", "fasta", "fa", "fna"));
+				fileChooser.addChoosableFileFilter(new FileNameExtensionFilter("GBK FILES", "gbk", "gb"));
 				fileChooser.setAcceptAllFileFilterUsed(false);
 				int returnVal = fileChooser.showOpenDialog(button_ReferenceFile);
 				if (returnVal == JFileChooser.APPROVE_OPTION) {

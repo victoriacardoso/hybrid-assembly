@@ -1,7 +1,6 @@
 package rast;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
@@ -52,13 +51,22 @@ public class Rast {
 			stmt = DatabaseConnection.connect.createStatement();
 			result = stmt.executeQuery(cmmdo);
 			String reference = result.getString("reference");
+			String ordered_file = result.getString("ordered_file");
+
 
 			BufferedReader breader = new BufferedReader(new FileReader(reference));
 
 			String line = breader.readLine();
-
-			String[] vect = line.split(" ");
-			String organismName = vect[1] + " " + vect[2];
+			String organismName = null;
+			
+			while(line!= null) {
+				if(line.contains("ORGANISM")) {
+					String [] vect = line.trim().split("M");
+					organismName = vect[1].trim();
+				}
+				
+				line = breader.readLine();
+			}
 
 			PreparedStatement preparedStmt = null;
 			preparedStmt = DatabaseConnection.connect.prepareStatement(
@@ -81,16 +89,21 @@ public class Rast {
 				String rast_pass = resulSet.getString("rast_pass");
 				String genetic_code = resulSet.getString("genetic_code");
 				String bioname = resulSet.getString("bioname");
-				String output = resulSet.getString("output");
 
 				Runtime submit = Runtime.getRuntime();
 				String rastCommand = "perl " + "lib/svr_submit_RAST_job.pl" + " --user " + rast_user + " --passwd "
-						+ rast_pass + " --fasta " + output + "/GenTreat/GenTreat.fasta" + " --domain " + domain
+						+ rast_pass + " --fasta " + ordered_file + " --domain " + domain
 						+ " --taxon " + taxonId + " --bioname " + bioname + " --genetic_code " + genetic_code;
 				Process p = submit.exec(rastCommand);
+				
+				PreparedStatement stmtAnnotationStart = null;
+				stmtAnnotationStart = DatabaseConnection.connect.prepareStatement(
+						"UPDATE project SET status = 'Running RAST' WHERE project.idproject=" + idproject + ";");
+				stmtAnnotationStart.executeUpdate();
+				
 				BufferedReader br;
 				String linha;
-
+				
 				br = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 				while (((linha = br.readLine()) != null) && ((linha = br.readLine()) != "\n")) {
 					String[] fields = linha.split("'");
@@ -105,10 +118,7 @@ public class Rast {
 					linha = br.readLine();
 
 				}
-				PreparedStatement stmtAnnotationStart = null;
-				stmtAnnotationStart = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status = 'Running RAST' WHERE project.idproject=" + idproject + ";");
-				stmtAnnotationStart.executeUpdate();
+
 				statusRast(idproject);
 
 			}
@@ -130,8 +140,10 @@ public class Rast {
 				String rast_user = resulSet.getString("rast_user");
 				String rast_pass = resulSet.getString("rast_pass");
 				String job_id = resulSet.getString("job_id");
+				
+				boolean running = true;
 
-				do {
+				while (running) {
 					Runtime submit = Runtime.getRuntime();
 					String rastCommand = "perl " + "lib/svr_status_of_RAST_job.pl " + rast_user + " " + rast_pass + " "
 							+ job_id;
@@ -144,15 +156,23 @@ public class Rast {
 
 					String[] fields = linha.split(":");
 					String status = fields[1].trim();
-					setStatus(status);
+					
 					System.out.println("RAST: " + status);
 
-					Thread.sleep(60000);
+					if(status.equals("complete")) {
+						running = false;
+					}
 
-				} while (getStatus().equals("running"));
+					Thread.sleep(60000);
+				}
 
 				downloadRast(idproject);
 				checkFileRast(idproject);
+				
+				PreparedStatement stmtAnnotationFinish = null;
+				stmtAnnotationFinish = DatabaseConnection.connect.prepareStatement(
+						"UPDATE project SET status = 'Complete process' WHERE project.idproject=" + idproject + ";");
+				stmtAnnotationFinish.executeUpdate();
 
 			}
 		} catch (Exception e) {
@@ -174,10 +194,7 @@ public class Rast {
 				String job_id = resulSet.getString("job_id");
 				String output = resulSet.getString("output");
 
-				File rastDirectory = new File(output + "/RAST");
-				rastDirectory.mkdir();
-
-				PrintWriter pw = new PrintWriter(new FileWriter(output + "/RAST/annotated-file.embl"));
+				PrintWriter pw = new PrintWriter(new FileWriter(output + "/GenTreat/GenTreat.embl"));
 
 				Runtime runDownload = Runtime.getRuntime();
 				String rastCommand = "perl " + "lib/svr_retrieve_RAST_job.pl " + rast_user + " " + rast_pass + " "
@@ -191,7 +208,6 @@ public class Rast {
 					pw.println(linha);
 				}
 				pw.close();
-
 			}
 		} catch (Exception e) {
 			System.err.println(e.getClass().getName() + ": " + e.getMessage());
@@ -209,7 +225,7 @@ public class Rast {
 
 			String output = resulSet.getString("output");
 
-			BufferedReader br = new BufferedReader(new FileReader(output + "/RAST/annotated-file.embl"));
+			BufferedReader br = new BufferedReader(new FileReader(output + "/GenTreat/GenTreat.embl"));
 			List<String> list = new ArrayList<>();
 			String line = br.readLine();
 			while (line != null) {
@@ -217,16 +233,7 @@ public class Rast {
 				line = br.readLine();
 
 			}
-			if (list.contains("//") == true) {
-
-				PreparedStatement stmtAnnotationFinish = null;
-				stmtAnnotationFinish = DatabaseConnection.connect.prepareStatement(
-						"UPDATE project SET status = 'Complete process' WHERE project.idproject=" + idproject + ";");
-				stmtAnnotationFinish.executeUpdate();
-				
-
-
-			} else {
+			if (!list.contains("//") == true) {
 				submitRast(idproject);
 			}
 			br.close();

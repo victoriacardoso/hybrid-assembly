@@ -1,14 +1,18 @@
 package cisa;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecutor;
+import org.apache.commons.io.FileUtils;
 
 import database.DatabaseConnection;
 
@@ -74,9 +78,15 @@ public class Cisa {
 				bw.close();
 
 				String mergeCommand = "python2 " + "lib/CISA1.3/Merge.py " + assemblyOutput + "/CISA/Merge.config";
-				CommandLine runMerge = CommandLine.parse(mergeCommand);
-				DefaultExecutor singleExecutor = new DefaultExecutor();
-				singleExecutor.execute(runMerge);
+				
+				PreparedStatement statmnt = null;
+				statmnt = DatabaseConnection.connect.prepareStatement(
+						"UPDATE project SET status =  'Running CISA' WHERE project.idproject=" + idproject + ";");
+				statmnt.executeUpdate();
+
+				System.out.println("CISA started...");
+				Process p = Runtime.getRuntime().exec(mergeCommand);
+				p.waitFor();
 			}
 		} catch (Exception e) {
 			System.err.println(e.getClass().getName() + ": " + e.getMessage());
@@ -88,10 +98,10 @@ public class Cisa {
 			Statement statement;
 			String cmmd;
 			ResultSet resulSet;
-
 			cmmd = "SELECT * FROM parameter WHERE idproject=" + idproject + ";";
 			statement = DatabaseConnection.connect.createStatement();
 			resulSet = statement.executeQuery(cmmd);
+			
 			while (resulSet.next()) {
 				String assemblyOutput = resulSet.getString("output");
 				String genomeSize = resulSet.getString("cisaGenomeSize");
@@ -117,24 +127,47 @@ public class Cisa {
 				bw.close();
 
 				String cisaCommand = "python2 " + "lib/CISA1.3/CISA.py " + assemblyOutput + "/CISA/CISA.config";
-				CommandLine runCisa = CommandLine.parse(cisaCommand);
-				DefaultExecutor rfExecutor = new DefaultExecutor();
-				rfExecutor.execute(runCisa);
+				Process p = Runtime.getRuntime().exec(cisaCommand);
+				
+				BufferedReader br;
+				String linha;
+
+				br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+				PrintWriter pw= new PrintWriter(new FileWriter(assemblyOutput + "/log.txt"));
+
+				while ((linha= br.readLine()) != null) {
+					pw.println(linha);
+				}
+				pw.close();
+				p.waitFor();
+
+				new File(assemblyOutput + "/log.txt").delete();
+				br.close();
+				p.waitFor();
 
 				PreparedStatement preparedStmt = null;
 				String result_assembly = assemblyOutput + "/CISA/cisa.ctg.fa";
+				new File(result_assembly).renameTo(new File(assemblyOutput + "/CISA/cisa.fasta"));
+				result_assembly = assemblyOutput + "/CISA/cisa.fasta";
+
+				
 				preparedStmt = DatabaseConnection.connect.prepareStatement("UPDATE organism SET result_cisa= '"
 						+ result_assembly + "' WHERE idproject=" + idproject + ";");
 				preparedStmt.executeUpdate();
 
-				checkCisaFile(idproject);
+				checkCisaFile(idproject, assemblyOutput);
+				
+				PreparedStatement stmt = null;
+				stmt = DatabaseConnection.connect.prepareStatement(
+						"UPDATE project SET status =  'Complete CISA' WHERE project.idproject=" + idproject + ";");
+				stmt.executeUpdate();
 			}
 		} catch (Exception e) {
 			System.err.println(e.getClass().getName() + ": " + e.getMessage());
 		}
 	}
 
-	public void checkCisaFile(int idproject) {
+	public void checkCisaFile(int idproject, String output) {
 		try {
 			Statement stm = null;
 			String cmmdo;
@@ -153,11 +186,15 @@ public class Cisa {
 						if (a.length() > 0) {
 							System.out.println("CISA OK");
 						} else {
+							File cisaDirectory = new File(output + "/CISA");
+							FileUtils.deleteDirectory(cisaDirectory);
 							mergeFileRun(idproject);
 							cisaFileRun(idproject);
 						}
 
 					} else {
+						File cisaDirectory = new File(output + "/CISA");
+						FileUtils.deleteDirectory(cisaDirectory);
 						mergeFileRun(idproject);
 						cisaFileRun(idproject);					}
 

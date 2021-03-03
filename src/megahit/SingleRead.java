@@ -5,8 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-import org.apache.commons.exec.CommandLine;
-import org.apache.commons.exec.DefaultExecutor;
+import org.apache.commons.io.FileUtils;
 
 import database.DatabaseConnection;
 
@@ -75,29 +74,41 @@ public class SingleRead {
 			cmmd = "SELECT * FROM parameter WHERE idproject=" + idproject + ";";
 			statement = DatabaseConnection.connect.createStatement();
 			resulSet = statement.executeQuery(cmmd);
-
+		
+			String output = null;
+			String mem_flag = null;
+			String min_count = null;
+			String megahit_kmers = null;
+			
 			while (resulSet.next()) {
-				String output = resulSet.getString("output");
-				String mem_flag = resulSet.getString("mem_flag");
-				String min_count = resulSet.getString("min_count");
-				String megahit_kmers = resulSet.getString("megahit_kmers");
-
+				output = resulSet.getString("output");
+				mem_flag = resulSet.getString("mem_flag");
+				min_count = resulSet.getString("min_count");
+				megahit_kmers = resulSet.getString("megahit_kmers");
+			}
 				String assemblyCommand = "/opt/megahit/bin/megahit" + " -r " + getSingle() + " --mem-flag " + mem_flag
 						+ " --min-count " + min_count + " --k-list " + megahit_kmers + " -o " + output
 						+ "/megahit-assembly";
-				CommandLine rfSpades = CommandLine.parse(assemblyCommand);
-				DefaultExecutor rfExecutor = new DefaultExecutor();
-				rfExecutor.execute(rfSpades);
+				
+				PreparedStatement sta = null;
+				sta = DatabaseConnection.connect
+						.prepareStatement("UPDATE project SET status =  'Running Megahit' WHERE project.idproject="
+								+ idproject + ";");
+				sta.executeUpdate();
 
+				System.out.println("Megahit assembly started...");
+
+				Process p = Runtime.getRuntime().exec(assemblyCommand);				
+				p.waitFor();
+				
 				checkMegahitFile(idproject);
 				
-				PreparedStatement preparedStmt = null;
-				String result_megahit = output + "/megahit-assemby/final.contigs.fa";
-				preparedStmt = DatabaseConnection.connect.prepareStatement("UPDATE organism SET result_megahit= '"
-						+ result_megahit + "' WHERE idproject=" + idproject + ";");
-				preparedStmt.executeUpdate();
-
-			}
+				PreparedStatement stat = null;
+				stat = DatabaseConnection.connect
+						.prepareStatement("UPDATE project SET status =  'Complete Megahit' WHERE project.idproject="
+								+ idproject + ";");
+				stat.executeUpdate();
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -121,12 +132,16 @@ public class SingleRead {
 						System.out.println("Megahit OK");
 					}
 					else {
+						File megahitDirectory = new File(output + "/megahit-assembly");
+						FileUtils.deleteDirectory(megahitDirectory);
 						runMegahit(idproject);
 						
 					}
 
 				}
 				else {
+					File megahitDirectory = new File(output + "/megahit-assembly");
+					FileUtils.deleteDirectory(megahitDirectory);
 					runMegahit(idproject);
 				}
 			}

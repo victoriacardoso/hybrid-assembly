@@ -44,9 +44,7 @@ public class DatabaseConnection {
 			Statement stmt = DatabaseConnection.connect.createStatement();
 			String sql = "CREATE TABLE IF NOT EXISTS organism" + "(idorganism INTEGER PRIMARY KEY AUTOINCREMENT,"
 					+ "single VARCHAR NULL," + "paired1 VARCHAR NULL," + "paired2 VARCHAR NULL,"
-					+ "result_spades VARCHAR NULL," + "result_megahit VARCHAR NULL," + "result_cisa VARCHAR NULL,"
-					+ "result_ragoo VARCHAR NULL," + "result_ragooScaf VARCHAR NULL, result_ragooTogether VARCHAR NULL,"
-					+ "reference VARCHAR NULL," + "ordered_file VARCHAR NULL," + "idproject INT NOT NULL,"
+					+ "result_cisa VARCHAR NULL," + "reference VARCHAR NULL," + "ordered_file VARCHAR NULL," + "idproject INT NOT NULL,"
 					+ "FOREIGN KEY(idproject) REFERENCES PROJECT(idproject));";
 			stmt.executeUpdate(sql);
 			stmt.close();
