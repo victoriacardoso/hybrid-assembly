@@ -44,27 +44,41 @@ public class Rast {
 
 	public void submitRast(int idproject) {
 		try {
+			String reference = null;
+			String ordered_file = null;
+			String result_cisa = null;
+			Process p;
+			String domain = null;
+			String taxonId = null;
+			String rast_user = null;
+			String rast_pass = null;
+			String genetic_code = null;
+			String bioname = null;
+			String ordination = null;
+
 			Statement stmt = null;
 			String cmmdo;
 			ResultSet result;
 			cmmdo = "SELECT * FROM organism WHERE idproject =" + idproject + ";";
 			stmt = DatabaseConnection.connect.createStatement();
 			result = stmt.executeQuery(cmmdo);
-			String reference = result.getString("reference");
-			String ordered_file = result.getString("ordered_file");
 
-
+			while (result.next()) {
+				reference = result.getString("reference");
+				ordered_file = result.getString("ordered_file");
+				result_cisa = result.getString("result_cisa");
+			}
 			BufferedReader breader = new BufferedReader(new FileReader(reference));
 
 			String line = breader.readLine();
 			String organismName = null;
-			
-			while(line!= null) {
-				if(line.contains("ORGANISM")) {
-					String [] vect = line.trim().split("M");
+
+			while (line != null) {
+				if (line.contains("ORGANISM")) {
+					String[] vect = line.trim().split("M");
 					organismName = vect[1].trim();
 				}
-				
+
 				line = breader.readLine();
 			}
 
@@ -83,27 +97,36 @@ public class Rast {
 			resulSet = statement.executeQuery(cmmd);
 
 			while (resulSet.next()) {
-				String domain = resulSet.getString("domain");
-				String taxonId = resulSet.getString("taxonId");
-				String rast_user = resulSet.getString("rast_user");
-				String rast_pass = resulSet.getString("rast_pass");
-				String genetic_code = resulSet.getString("genetic_code");
-				String bioname = resulSet.getString("bioname");
-
+				domain = resulSet.getString("domain");
+				taxonId = resulSet.getString("taxonId");
+				rast_user = resulSet.getString("rast_user");
+				rast_pass = resulSet.getString("rast_pass");
+				genetic_code = resulSet.getString("genetic_code");
+				bioname = resulSet.getString("bioname");
+				ordination = resulSet.getString("ordination");
+			}
 				Runtime submit = Runtime.getRuntime();
-				String rastCommand = "perl " + "lib/svr_submit_RAST_job.pl" + " --user " + rast_user + " --passwd "
-						+ rast_pass + " --fasta " + ordered_file + " --domain " + domain
-						+ " --taxon " + taxonId + " --bioname " + bioname + " --genetic_code " + genetic_code;
-				Process p = submit.exec(rastCommand);
-				
+
+				if (ordination.equals("1")) {
+					String rastCommand = "perl " + "lib/svr_submit_RAST_job.pl" + " --user " + rast_user + " --passwd "
+							+ rast_pass + " --fasta " + ordered_file + " --domain " + domain + " --taxon " + taxonId
+							+ " --bioname " + bioname + " --genetic_code " + genetic_code;
+					p = submit.exec(rastCommand);
+				} else {
+					String rastCommand = "perl " + "lib/svr_submit_RAST_job.pl" + " --user " + rast_user + " --passwd "
+							+ rast_pass + " --fasta " + result_cisa + " --domain " + domain + " --taxon " + taxonId
+							+ " --bioname " + bioname + " --genetic_code " + genetic_code;
+					p = submit.exec(rastCommand);
+				}
+
 				PreparedStatement stmtAnnotationStart = null;
 				stmtAnnotationStart = DatabaseConnection.connect.prepareStatement(
 						"UPDATE project SET status = 'Running RAST' WHERE project.idproject=" + idproject + ";");
 				stmtAnnotationStart.executeUpdate();
-				
+
 				BufferedReader br;
 				String linha;
-				
+
 				br = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 				while (((linha = br.readLine()) != null) && ((linha = br.readLine()) != "\n")) {
 					String[] fields = linha.split("'");
@@ -121,7 +144,7 @@ public class Rast {
 
 				statusRast(idproject);
 
-			}
+			
 		} catch (Exception e) {
 			System.err.println(e.getClass().getName() + ": " + e.getMessage());
 		}
@@ -140,7 +163,7 @@ public class Rast {
 				String rast_user = resulSet.getString("rast_user");
 				String rast_pass = resulSet.getString("rast_pass");
 				String job_id = resulSet.getString("job_id");
-				
+
 				boolean running = true;
 
 				while (running) {
@@ -156,10 +179,10 @@ public class Rast {
 
 					String[] fields = linha.split(":");
 					String status = fields[1].trim();
-					
+
 					System.out.println("RAST: " + status);
 
-					if(status.equals("complete")) {
+					if (status.equals("complete")) {
 						running = false;
 					}
 
@@ -168,7 +191,7 @@ public class Rast {
 
 				downloadRast(idproject);
 				checkFileRast(idproject);
-				
+
 				PreparedStatement stmtAnnotationFinish = null;
 				stmtAnnotationFinish = DatabaseConnection.connect.prepareStatement(
 						"UPDATE project SET status = 'Complete process' WHERE project.idproject=" + idproject + ";");
@@ -176,8 +199,8 @@ public class Rast {
 
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
-}
+			System.err.println(e.getClass().getName() + ": " + e.getMessage());
+		}
 	}
 
 	public void downloadRast(int idproject) {

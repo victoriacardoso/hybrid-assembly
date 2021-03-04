@@ -29,14 +29,12 @@ import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 
-import cisa.Cisa;
 import database.DatabaseConnection;
 import log.Log;
 import log.Status;
+import log.Tools;
 import mauve.Ordering;
-import megahit.PairedRead;
 import rast.Rast;
-import spades.SingleRead;
 
 public class ProjectLog {
 	private static JPanel panel;
@@ -227,7 +225,7 @@ public class ProjectLog {
 					resulSet = statement.executeQuery(cmmd);
 
 					while (resulSet.next()) {
-						String output = resulSet.getString("output").trim().replace(" ", "");
+						String output = resulSet.getString("output");
 
 						File directory = new File(output);
 						directory.mkdir();
@@ -248,7 +246,7 @@ public class ProjectLog {
 					resulSet = statement.executeQuery(cmmd);
 
 					while (resulSet.next()) {
-						String output = resulSet.getString("output").trim().replace(" ", "");
+						String output = resulSet.getString("output");
 						File directory = new File(output);
 						directory.mkdir();
 					}
@@ -257,7 +255,8 @@ public class ProjectLog {
 				}
 
 			} catch (Exception e) {
-				e.printStackTrace();
+				System.err.println(e.getClass().getName() + ": " + e.getMessage());
+
 			}
 		}
 	};
@@ -288,55 +287,66 @@ public class ProjectLog {
 		@Override
 		public void run() {
 			try {
+				String singleRead = null;
+				String order = null;
+				Tools tools = new Tools();
+
 				CustomPanel customPanel = new CustomPanel();
 				panel.add(customPanel);
 				customPanel.setBounds(236, 229, 125, 96);
-								
+
 				Statement stm = null;
 				String cmmdo;
 				ResultSet rst;
-				cmmdo = "SELECT * FROM organism WHERE idproject =" + id + ";";
+				cmmdo = "SELECT * FROM organism WHERE idproject=" + id + ";";
 				stm = DatabaseConnection.connect.createStatement();
 				rst = stm.executeQuery(cmmdo);
-				while (rst.next()) {
-					String singleRead = rst.getString("single");
 
-					if (singleRead != null) {
+				Statement statement;
+				String cmmd;
+				ResultSet resulSet;
+				cmmd = "SELECT * FROM parameter WHERE idproject=" + id + ";";
+				statement = DatabaseConnection.connect.createStatement();
+				resulSet = statement.executeQuery(cmmd);
+
+				while (rst.next()) {
+					singleRead = rst.getString("single");
+				}
+				while (resulSet.next()) {
+					order = resulSet.getString("ordination");
+				}
+
+				if (order.equals("1")) {
+					if ((singleRead != null)) {
 						customPanel.addProgress(20);
-						SingleRead single = new SingleRead();
-						single.runSpades(Integer.parseInt(id));
-						customPanel.addProgress(20);
+						tools.runSingleSPAdes(Integer.parseInt(id), customPanel, 20);
 
 						Thread.sleep(10000);
 
 					} else {
 						customPanel.addProgress(20);
-						spades.PairedRead pairedRead = new spades.PairedRead();
-						pairedRead.runSpades(Integer.parseInt(id));
-						customPanel.addProgress(20);
+						tools.runPareadSPAdes(Integer.parseInt(id), customPanel, 20);
 
 						Thread.sleep(10000);
 					}
+					tools.runCisa(Integer.parseInt(id), customPanel, 20);
+					tools.runMauve(Integer.parseInt(id), customPanel, 20);
+					tools.runRast(Integer.parseInt(id), customPanel, 20);
 				}
-				
-				Cisa cisa = new Cisa();
-				cisa.mergeFileRun(Integer.parseInt(id));
-				cisa.cisaFileRun(Integer.parseInt(id));
-				customPanel.addProgress(20);
+				else {
+					if ((singleRead != null)) {
+						tools.runSingleSPAdes(Integer.parseInt(id), customPanel, 25);
 
-				Thread.sleep(20000);
+						Thread.sleep(10000);
 
-				Ordering ordering = new Ordering();
-				ordering.OrderContigs(id);
-				customPanel.addProgress(20);
+					} else {
+						tools.runPareadSPAdes(Integer.parseInt(id), customPanel, 25);
 
-
-				Thread.sleep(20000);
-
-				Rast rast = new Rast();
-				rast.submitRast(Integer.parseInt(id));
-				customPanel.addProgress(20);
-
+						Thread.sleep(10000);
+					}
+					tools.runCisa(Integer.parseInt(id), customPanel, 25);
+					tools.runRast(Integer.parseInt(id), customPanel, 25);
+				}
 			} catch (Exception e) {
 				System.err.println(e.getClass().getName() + ": " + e.getMessage());
 			}
@@ -350,26 +360,41 @@ public class ProjectLog {
 				CustomPanel customPanel = new CustomPanel();
 				panel.add(customPanel);
 				customPanel.setBounds(236, 229, 125, 96);
+
+				String order = null;
+				Tools tools = new Tools();
 				
-				customPanel.addProgress(40);
+				Statement statement;
+				String cmmd;
+				ResultSet resulSet;
+				cmmd = "SELECT * FROM parameter WHERE idproject=" + id + ";";
+				statement = DatabaseConnection.connect.createStatement();
+				resulSet = statement.executeQuery(cmmd);
+
+				while (resulSet.next()) {
+					order = resulSet.getString("ordination");
+				}
 				
-				Cisa cisa = new Cisa();
-				cisa.mergeFileRun(Integer.parseInt(id));
-				cisa.cisaFileRun(Integer.parseInt(id));
-				customPanel.addProgress(20);
+				if(order.equals("1")) {
+					customPanel.addProgress(40);
+					tools.runCisa(Integer.parseInt(id), customPanel, 20);
+					
+					Thread.sleep(20000);
+					
+					tools.runMauve(Integer.parseInt(id), customPanel, 20);
+					
+					Thread.sleep(20000);
 
-				Thread.sleep(20000);
+					tools.runRast(Integer.parseInt(id), customPanel, 20);
+				}
+				else {
+					customPanel.addProgress(50);
+					tools.runCisa(Integer.parseInt(id), customPanel, 25);
+					
+					Thread.sleep(20000);
 
-				Ordering ordering = new Ordering();
-				ordering.OrderContigs(id);
-				customPanel.addProgress(20);
-
-				Thread.sleep(20000);
-
-				Rast rast = new Rast();
-				rast.submitRast(Integer.parseInt(id));
-				customPanel.addProgress(20);
-
+					tools.runRast(Integer.parseInt(id), customPanel, 25);
+				}
 			} catch (Exception e) {
 				System.err.println(e.getClass().getName() + ": " + e.getMessage());
 			}
@@ -383,10 +408,10 @@ public class ProjectLog {
 				CustomPanel customPanel = new CustomPanel();
 				panel.add(customPanel);
 				customPanel.setBounds(236, 229, 125, 96);
-				
+
 				customPanel.addProgress(60);
 				Ordering ordering = new Ordering();
-				ordering.OrderContigs(id);
+				ordering.OrderContigs(Integer.parseInt(id));
 				customPanel.addProgress(20);
 
 				Thread.sleep(20000);
@@ -405,18 +430,22 @@ public class ProjectLog {
 		@Override
 		public void run() {
 			Status status = new Status();
-			
+
 			try {
-				if (status.checkStatus(Integer.parseInt(id)).equals("Running SPAdes") || status.checkStatus(Integer.parseInt(id)).equals("Complete Megahit")) {
+				if (status.checkStatus(Integer.parseInt(id)).equals("Running SPAdes")
+						|| status.checkStatus(Integer.parseInt(id)).equals("Complete Megahit")) {
 					startLogProject(Integer.parseInt(id), 0, 0, 1, 2, 3);
 				}
-				if (status.checkStatus(Integer.parseInt(id)).equals("Running CISA") || status.checkStatus(Integer.parseInt(id)).equals("Complete SPAdes")) {
+				if (status.checkStatus(Integer.parseInt(id)).equals("Running CISA")
+						|| status.checkStatus(Integer.parseInt(id)).equals("Complete SPAdes")) {
 					startLogProject(Integer.parseInt(id), 0, 0, 0, 1, 2);
 				}
-				if (status.checkStatus(Integer.parseInt(id)).equals("Running Mauve") || status.checkStatus(Integer.parseInt(id)).equals("Complete CISA")) {
+				if (status.checkStatus(Integer.parseInt(id)).equals("Running Mauve")
+						|| status.checkStatus(Integer.parseInt(id)).equals("Complete CISA")) {
 					startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 1);
 				}
-				if (status.checkStatus(Integer.parseInt(id)).equals("Running RAST") || status.checkStatus(Integer.parseInt(id)).equals("Complete Mauve")) {
+				if (status.checkStatus(Integer.parseInt(id)).equals("Running RAST")
+						|| status.checkStatus(Integer.parseInt(id)).equals("Complete Mauve")) {
 					startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 0);
 				}
 			} catch (NumberFormatException | SQLException e) {
@@ -468,6 +497,8 @@ public class ProjectLog {
 		try {
 			Status status = new Status();
 			String checkStatus = status.checkStatus(idproject);
+			
+			Thread.sleep(12000);
 			
 			if (checkStatus.equals("Running Megahit")) {
 				Log log = new Log();
@@ -566,6 +597,13 @@ public class ProjectLog {
 
 	public static void runTools(int idproject) {
 		try {
+			String singleRead = null;
+			String order = null;
+			Tools tools = new Tools();
+
+			CustomPanel customPanel = new CustomPanel();
+			panel.add(customPanel);
+			customPanel.setBounds(236, 229, 125, 96);
 
 			Statement stm = null;
 			String cmmdo;
@@ -573,57 +611,66 @@ public class ProjectLog {
 			cmmdo = "SELECT * FROM organism WHERE idproject=" + idproject + ";";
 			stm = DatabaseConnection.connect.createStatement();
 			rst = stm.executeQuery(cmmdo);
-			
-			CustomPanel customPanel = new CustomPanel();
-			panel.add(customPanel);
-			customPanel.setBounds(236, 229, 125, 96);
+
+			Statement statement;
+			String cmmd;
+			ResultSet resulSet;
+			cmmd = "SELECT * FROM parameter WHERE idproject=" + idproject + ";";
+			statement = DatabaseConnection.connect.createStatement();
+			resulSet = statement.executeQuery(cmmd);
 
 			while (rst.next()) {
-				String singleRead = rst.getString("single");
+				singleRead = rst.getString("single");
+			}
+			while (resulSet.next()) {
+				order = resulSet.getString("ordination");
+			}
 
+			if (order.equals("1")) {
 				if ((singleRead != null)) {
-					megahit.SingleRead megahitSingle = new megahit.SingleRead();
-					megahitSingle.runMegahit(idproject);
-					customPanel.addProgress(20);
-					
+					tools.runSingleMegahit(idproject, customPanel, 20);
+
 					Thread.sleep(20000);
 
-					SingleRead single = new SingleRead();
-					single.runSpades(idproject);
-					customPanel.addProgress(20);
+					tools.runSingleSPAdes(idproject, customPanel, 20);
+					
+					Thread.sleep(10000);
+
+				} else {
+					tools.runPareadMegahit(idproject, customPanel, 20);
+
+					Thread.sleep(20000);
+					
+					tools.runPareadSPAdes(idproject, customPanel, 20);
+
+					Thread.sleep(10000);
+				}
+				tools.runCisa(idproject, customPanel, 20);
+				tools.runMauve(idproject, customPanel, 20);
+				tools.runRast(idproject, customPanel, 20);
+			}
+			else {
+				if ((singleRead != null)) {
+					tools.runSingleMegahit(idproject, customPanel, 25);
+
+					Thread.sleep(20000);
+
+					tools.runSingleSPAdes(idproject, customPanel, 25);
 
 					Thread.sleep(10000);
 
 				} else {
-					PairedRead paired = new PairedRead();
-					paired.runMegahit(idproject);
-					customPanel.addProgress(20);
+					tools.runPareadMegahit(idproject, customPanel, 25);
 
 					Thread.sleep(20000);
 
-					spades.PairedRead pairedspades = new spades.PairedRead();
-					pairedspades.runSpades(idproject);
-					customPanel.addProgress(20);
+					tools.runPareadSPAdes(idproject, customPanel, 25);
 
 					Thread.sleep(10000);
 				}
+				tools.runCisa(idproject, customPanel, 25);
+				tools.runRast(idproject, customPanel, 25);
 			}
-			Cisa cisa = new Cisa();
-			cisa.mergeFileRun(idproject);
-			cisa.cisaFileRun(idproject);
-			customPanel.addProgress(20);
-
-			Thread.sleep(20000);
-
-			Ordering ordering = new Ordering();
-			ordering.OrderContigs(id);
-			customPanel.addProgress(20);
-
-			Thread.sleep(20000);
-
-			Rast rast = new Rast();
-			rast.submitRast(idproject);
-			customPanel.addProgress(20);
 
 		}
 

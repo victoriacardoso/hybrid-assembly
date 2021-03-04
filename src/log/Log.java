@@ -41,11 +41,8 @@ public class Log {
 		DateFormat dateFormat = DateFormat.getInstance();
 		String startDate = dateFormat.format(date);
 		
-		dft.addRow(new Object[] { null, null, null });
-		dft.setValueAt("Running RAST", 4, 0);
-		dft.setValueAt(startDate, 4, 1);
-		
-		
+		dft.addRow(new Object[] { "Running RAST",startDate, null});
+
 	}
 	
 	

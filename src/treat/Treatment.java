@@ -12,7 +12,7 @@ public class Treatment {
 	public void treatRead(String read1, String read2, String output) throws ExecuteException, IOException, InterruptedException {
 		String command = "lib/bbmap/repair.sh in1=" + read1 + " in2=" + read2 + " out1=" + output + "1_treated.fastq"
 				+ " out2=" + output + "2_treated.fastq repair";
-		System.out.println("Treating files");
+		System.out.println("Treating files...");
 		Process p = Runtime.getRuntime().exec(command);
 
 		BufferedReader br;

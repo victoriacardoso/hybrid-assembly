@@ -17,13 +17,13 @@ public class DatabaseConnection {
 		try {
 			Class.forName("org.sqlite.JDBC");
 			connect = DriverManager.getConnection("jdbc:sqlite:database.db");
-			
+
 		} catch (Exception e) {
 			System.err.println(e.getClass().getName() + ": " + e.getMessage());
 			System.out.println("Connection error");
 			System.exit(0);
 		}
-		
+
 	}
 
 	public void createProject() {
@@ -44,8 +44,8 @@ public class DatabaseConnection {
 			Statement stmt = DatabaseConnection.connect.createStatement();
 			String sql = "CREATE TABLE IF NOT EXISTS organism" + "(idorganism INTEGER PRIMARY KEY AUTOINCREMENT,"
 					+ "single VARCHAR NULL," + "paired1 VARCHAR NULL," + "paired2 VARCHAR NULL,"
-					+ "result_cisa VARCHAR NULL," + "reference VARCHAR NULL," + "ordered_file VARCHAR NULL," + "idproject INT NOT NULL,"
-					+ "FOREIGN KEY(idproject) REFERENCES PROJECT(idproject));";
+					+ "result_cisa VARCHAR NULL," + "reference VARCHAR NULL," + "ordered_file VARCHAR NULL,"
+					+ "idproject INT NOT NULL," + "FOREIGN KEY(idproject) REFERENCES PROJECT(idproject));";
 			stmt.executeUpdate(sql);
 			stmt.close();
 		} catch (Exception e) {
@@ -64,13 +64,14 @@ public class DatabaseConnection {
 					+ "cisaGenomeSize VARCHAR NULL," + "cisaR2Gap VARCHAR NULL," + "output VARCHAR NULL,"
 					+ "domain VARCHAR NULL," + "taxonId VARCHAR NULL," + "rast_user VARCHAR NULL,"
 					+ "rast_pass VARCHAR NULL," + "genetic_code VARCHAR NULL," + "bioname VARCHAR NULL,"
-					+ "job_id VARCHAR NULL," + "" + "idproject INT NOT NULL,"
+					+ "ordination VARCHAR NULL," + "job_id VARCHAR NULL," + "idproject INT NOT NULL,"
 					+ "FOREIGN KEY(idproject) REFERENCES PROJECT(idproject))";
 
 			stmt.executeUpdate(sql);
 			stmt.close();
 		} catch (Exception e) {
 			System.err.println(e.getClass().getName() + ": " + e.getMessage());
+			e.printStackTrace();
 			System.exit(0);
 		}
 	}
@@ -126,11 +127,11 @@ public class DatabaseConnection {
 	public void insertParameters(String spades_options, String orientation, String spades_kmers, String spades_memory,
 			String spades_threads, String output, String mem_flag, String min_count, String megahit_kmers,
 			String taxonid, String rast_user, String rast_pass, String cisaMinLength, String cisaGenomeSize,
-			String cisaR2Gap) {
+			String cisaR2Gap, String order) {
 
 		try {
 			PreparedStatement stmt = DatabaseConnection.connect.prepareStatement(
-					"insert into parameter (spades_options,orientation, spades_kmers, spades_memory, spades_threads, output, mem_flag, min_count, megahit_kmers, cisaMinLength, cisaGenomeSize, cisaR2Gap, domain, taxonid, rast_user, rast_pass, genetic_code, idproject) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+					"insert into parameter (spades_options,orientation, spades_kmers, spades_memory, spades_threads, output, mem_flag, min_count, megahit_kmers, cisaMinLength, cisaGenomeSize, cisaR2Gap, domain, taxonid, rast_user, rast_pass, genetic_code, idproject, ordination) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 			stmt.setString(1, spades_options);
 			stmt.setString(2, orientation);
 			stmt.setString(3, spades_kmers);
@@ -148,6 +149,7 @@ public class DatabaseConnection {
 			stmt.setString(15, rast_user);
 			stmt.setString(16, rast_pass);
 			stmt.setString(17, "11");
+			stmt.setString(19, order);
 
 			Statement st = null;
 			String cmd;
@@ -163,7 +165,8 @@ public class DatabaseConnection {
 			stmt.executeUpdate();
 			stmt.close();
 		} catch (Exception e) {
-			System.err.println(e.getClass().getName() + ": " + e.getMessage());
+			// System.err.println(e.getClass().getName() + ": " + e.getMessage());
+			e.printStackTrace();
 			System.exit(0);
 		}
 	}
@@ -182,11 +185,11 @@ public class DatabaseConnection {
 					Statement stmt_delfield = connect.createStatement();
 					String cmdd = "DELETE FROM project WHERE idproject=" + rs.getString("idproject") + ";";
 					stmt_delfield.executeUpdate(cmdd);
-					
+
 					Statement st = connect.createStatement();
 					String cmd0 = "DELETE FROM organism WHERE idproject=" + rs.getString("idproject") + ";";
 					st.executeUpdate(cmd0);
-					
+
 					Statement stm = connect.createStatement();
 					String cmmd = "DELETE FROM parameter WHERE idproject=" + rs.getString("idproject") + ";";
 					stm.executeUpdate(cmmd);

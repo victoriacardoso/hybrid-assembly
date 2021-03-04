@@ -110,7 +110,7 @@ public class SingleRead {
 				stat.executeUpdate();
 			
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.err.println(e.getClass().getName() + ": " + e.getMessage());
 		}
 	}
 
@@ -137,7 +137,6 @@ public class SingleRead {
 						runMegahit(idproject);
 						
 					}
-
 				}
 				else {
 					File megahitDirectory = new File(output + "/megahit-assembly");
@@ -146,7 +145,7 @@ public class SingleRead {
 				}
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.err.println(e.getClass().getName() + ": " + e.getMessage());
 		}
 	}
 }

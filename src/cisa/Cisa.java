@@ -45,12 +45,12 @@ public class Cisa {
 			while (resulSet.next()) {
 
 				String assemblyOutput = resulSet.getString("output");
-				
+
 				File cisaFolder = new File(assemblyOutput + "/CISA");
-				if(!cisaFolder.exists()) {
+				if (!cisaFolder.exists()) {
 					cisaFolder.mkdir();
 				}
-				
+
 				String cpAssemblySpades = "cp " + assemblyOutput + "/spades-assembly/scaffolds.fasta" + " "
 						+ assemblyOutput + "/CISA/";
 				CommandLine cpAssembly1 = CommandLine.parse(cpAssemblySpades);
@@ -78,7 +78,7 @@ public class Cisa {
 				bw.close();
 
 				String mergeCommand = "python2 " + "lib/CISA1.3/Merge.py " + assemblyOutput + "/CISA/Merge.config";
-				
+
 				PreparedStatement statmnt = null;
 				statmnt = DatabaseConnection.connect.prepareStatement(
 						"UPDATE project SET status =  'Running CISA' WHERE project.idproject=" + idproject + ";");
@@ -101,10 +101,11 @@ public class Cisa {
 			cmmd = "SELECT * FROM parameter WHERE idproject=" + idproject + ";";
 			statement = DatabaseConnection.connect.createStatement();
 			resulSet = statement.executeQuery(cmmd);
-			
+
 			while (resulSet.next()) {
 				String assemblyOutput = resulSet.getString("output");
 				String genomeSize = resulSet.getString("cisaGenomeSize");
+				String ordination = resulSet.getString("ordination");
 
 				BufferedWriter bw = new BufferedWriter(new FileWriter(assemblyOutput + "/CISA/CISA.config"));
 				bw.write("genome=" + genomeSize);
@@ -128,14 +129,14 @@ public class Cisa {
 
 				String cisaCommand = "python2 " + "lib/CISA1.3/CISA.py " + assemblyOutput + "/CISA/CISA.config";
 				Process p = Runtime.getRuntime().exec(cisaCommand);
-				
+
 				BufferedReader br;
 				String linha;
 
 				br = new BufferedReader(new InputStreamReader(p.getInputStream()));
-				PrintWriter pw= new PrintWriter(new FileWriter(assemblyOutput + "/log.txt"));
+				PrintWriter pw = new PrintWriter(new FileWriter(assemblyOutput + "/log.txt"));
 
-				while ((linha= br.readLine()) != null) {
+				while ((linha = br.readLine()) != null) {
 					pw.println(linha);
 				}
 				pw.close();
@@ -147,16 +148,29 @@ public class Cisa {
 
 				PreparedStatement preparedStmt = null;
 				String result_assembly = assemblyOutput + "/CISA/cisa.ctg.fa";
-				new File(result_assembly).renameTo(new File(assemblyOutput + "/CISA/cisa.fasta"));
-				result_assembly = assemblyOutput + "/CISA/cisa.fasta";
-
 				
-				preparedStmt = DatabaseConnection.connect.prepareStatement("UPDATE organism SET result_cisa= '"
-						+ result_assembly + "' WHERE idproject=" + idproject + ";");
-				preparedStmt.executeUpdate();
+				if(ordination.equals("1")) {
+					new File(result_assembly).renameTo(new File(assemblyOutput + "/CISA/cisa.fasta"));
 
+					preparedStmt = DatabaseConnection.connect.prepareStatement("UPDATE organism SET result_cisa= '"
+							+ result_assembly + "' WHERE idproject=" + idproject + ";");
+					preparedStmt.executeUpdate();
+
+				}
+				else {
+					File genTreatFolder = new File(assemblyOutput + "/GenTreat/");
+					genTreatFolder.mkdir();
+					new File(result_assembly).renameTo(new File(genTreatFolder + "/GenTreat.fasta"));
+					
+					preparedStmt = DatabaseConnection.connect.prepareStatement("UPDATE organism SET result_cisa= '"
+							+ genTreatFolder + "/GenTreat.fasta" + "' WHERE idproject=" + idproject + ";");
+					preparedStmt.executeUpdate();
+
+				}
+								
+				
 				checkCisaFile(idproject, assemblyOutput);
-				
+
 				PreparedStatement stmt = null;
 				stmt = DatabaseConnection.connect.prepareStatement(
 						"UPDATE project SET status =  'Complete CISA' WHERE project.idproject=" + idproject + ";");
@@ -179,27 +193,24 @@ public class Cisa {
 			while (rst.next()) {
 				String result_assembly = rst.getString("result_cisa");
 
-				try {
-					File a = new File(result_assembly);
-					Thread.sleep(10000);
-					if (a.exists()) {
-						if (a.length() > 0) {
-							System.out.println("CISA OK");
-						} else {
-							File cisaDirectory = new File(output + "/CISA");
-							FileUtils.deleteDirectory(cisaDirectory);
-							mergeFileRun(idproject);
-							cisaFileRun(idproject);
-						}
-
+				File a = new File(result_assembly);
+				Thread.sleep(10000);
+				if (a.exists()) {
+					if (a.length() > 0) {
+						System.out.println("CISA OK");
 					} else {
 						File cisaDirectory = new File(output + "/CISA");
 						FileUtils.deleteDirectory(cisaDirectory);
 						mergeFileRun(idproject);
-						cisaFileRun(idproject);					}
+						cisaFileRun(idproject);
+					}
 
-				} catch (Exception e) {
-					System.err.println(e.getClass().getName() + ": " + e.getMessage());
+				} else {
+					File cisaDirectory = new File(output + "/CISA");
+					FileUtils.deleteDirectory(cisaDirectory);
+					mergeFileRun(idproject);
+					cisaFileRun(idproject);
+
 				}
 			}
 		} catch (Exception e) {
