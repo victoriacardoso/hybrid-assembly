@@ -200,6 +200,60 @@ public class CisaAndRast {
 		});
 		btnOk.setBounds(154, 66, 66, 19);
 		dialogEmpty.getContentPane().add(btnOk);
+		
+		JPanel panel_1_1 = new JPanel();
+		panel_1_1.setBounds(12, 124, 616, 48);
+		frmParameters.getContentPane().add(panel_1_1);
+		panel_1_1.setLayout(null);
+		panel_1_1.setBorder(new TitledBorder(new LineBorder(new Color(184, 207, 229)), "Mauve", TitledBorder.LEADING,
+				TitledBorder.TOP, null, new Color(51, 51, 51)));
+
+		JRadioButton rdbtnYes = new JRadioButton("Yes");
+		JRadioButton rdbtnNo = new JRadioButton("No");
+		
+		rdbtnNo.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				rdbtnYes.setSelected(false);
+				try {
+					int idproject = 0;
+					Statement st = null;
+					st = DatabaseConnection.connect.createStatement();
+					idproject = st.executeQuery("select last_insert_rowid()").getInt(1);
+
+					PreparedStatement stat = null;
+					stat = DatabaseConnection.connect
+							.prepareStatement("UPDATE parameter SET ordination=0" + " WHERE idproject=" + idproject);
+					stat.executeUpdate();
+				} catch (Exception e) {
+					System.err.println(e.getClass().getName() + ":" + e.getMessage());
+				}
+			}
+		});
+
+		rdbtnYes.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				rdbtnNo.setSelected(false);
+				try {
+					int idproject = 0;
+					Statement st = null;
+					st = DatabaseConnection.connect.createStatement();
+					idproject = st.executeQuery("select last_insert_rowid()").getInt(1);
+
+					PreparedStatement stat = null;
+					stat = DatabaseConnection.connect
+							.prepareStatement("UPDATE parameter SET ordination=1" + " WHERE idproject=" + idproject);
+					stat.executeUpdate();
+				} catch (Exception e) {
+					System.err.println(e.getClass().getName() + ":" + e.getMessage());
+				}
+			}
+		});
+		rdbtnYes.setBounds(340, 21, 56, 23);
+		panel_1_1.add(rdbtnYes);
+
+		rdbtnNo.setBounds(400, 21, 56, 23);
+		panel_1_1.add(rdbtnNo);
+
 
 		JButton btnNext = new JButton("Next");
 		btnNext.addActionListener(new ActionListener() {
@@ -221,7 +275,7 @@ public class CisaAndRast {
 					idproject = st.executeQuery("select last_insert_rowid()").getInt(1);
 
 					if (!cisaR2Gap.isBlank() && !cisaMinLength.isBlank() && !cisaGenomeSize.isBlank()
-							&& !rast_login.isBlank() && !password_Rast.isBlank() && !taxonId.isBlank()) {
+							&& !rast_login.isBlank() && !password_Rast.isBlank() && !taxonId.isBlank() && (rdbtnNo.isSelected() || rdbtnYes.isSelected()) ) {
 						PreparedStatement stat = null;
 						stat = DatabaseConnection.connect.prepareStatement("UPDATE parameter SET cisaMinLength="
 								+ cisaMinLength + "," + "cisaGenomeSize=" + cisaGenomeSize + ", cisaR2Gap=" + cisaR2Gap
@@ -322,63 +376,14 @@ public class CisaAndRast {
 		chckbxShowPassword.setBounds(267, 49, 129, 23);
 		panel.add(chckbxShowPassword);
 
-		JPanel panel_1_1 = new JPanel();
-		panel_1_1.setBounds(12, 124, 616, 48);
-		frmParameters.getContentPane().add(panel_1_1);
-		panel_1_1.setLayout(null);
-		panel_1_1.setBorder(new TitledBorder(new LineBorder(new Color(184, 207, 229)), "Mauve", TitledBorder.LEADING,
-				TitledBorder.TOP, null, new Color(51, 51, 51)));
-
+		
 		JLabel lblDoYouWant = new JLabel("Do you want to order the assembly result?");
 		lblDoYouWant.setBounds(12, 25, 316, 15);
 		panel_1_1.add(lblDoYouWant);
 		
-		JRadioButton rdbtnYes = new JRadioButton("Yes");
-		JRadioButton rdbtnNo = new JRadioButton("No");
 		
-		rdbtnNo.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				rdbtnYes.setSelected(false);
-				try {
-					int idproject = 0;
-					Statement st = null;
-					st = DatabaseConnection.connect.createStatement();
-					idproject = st.executeQuery("select last_insert_rowid()").getInt(1);
-
-					PreparedStatement stat = null;
-					stat = DatabaseConnection.connect
-							.prepareStatement("UPDATE parameter SET ordination=0" + " WHERE idproject=" + idproject);
-					stat.executeUpdate();
-				} catch (Exception e) {
-					System.err.println(e.getClass().getName() + ":" + e.getMessage());
-				}
-			}
-		});
-
-		rdbtnYes.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				rdbtnNo.setSelected(false);
-				try {
-					int idproject = 0;
-					Statement st = null;
-					st = DatabaseConnection.connect.createStatement();
-					idproject = st.executeQuery("select last_insert_rowid()").getInt(1);
-
-					PreparedStatement stat = null;
-					stat = DatabaseConnection.connect
-							.prepareStatement("UPDATE parameter SET ordination=1" + " WHERE idproject=" + idproject);
-					stat.executeUpdate();
-				} catch (Exception e) {
-					System.err.println(e.getClass().getName() + ":" + e.getMessage());
-				}
-			}
-		});
-		rdbtnYes.setBounds(340, 21, 56, 23);
-		panel_1_1.add(rdbtnYes);
-
-		rdbtnNo.setBounds(400, 21, 56, 23);
-		panel_1_1.add(rdbtnNo);
-
+		
+		
 	}
 
 	public JFrame getFrame() {

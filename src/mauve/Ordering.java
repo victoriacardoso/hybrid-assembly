@@ -49,7 +49,6 @@ public class Ordering {
 		Runtime run = Runtime.getRuntime();
 		Process p;
 		String command1 = "bash lib/mauv.sh " + output + "/Mauve" + " " + reference + " " + result_cisa;
-		System.out.println(command1);
 
 		try {
 			PreparedStatement stmtOrder = null;
@@ -57,7 +56,7 @@ public class Ordering {
 					"UPDATE project SET status =  'Running Mauve' WHERE project.idproject=" + id + ";");
 			stmtOrder.executeUpdate();
 
-			System.out.println("Starting OrderingContigs");
+			System.out.println("Starting Mauve");
 			p = run.exec(command1);
 
 			BufferedReader br;

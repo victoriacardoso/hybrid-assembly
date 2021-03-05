@@ -153,7 +153,7 @@ public class Cisa {
 					new File(result_assembly).renameTo(new File(assemblyOutput + "/CISA/cisa.fasta"));
 
 					preparedStmt = DatabaseConnection.connect.prepareStatement("UPDATE organism SET result_cisa= '"
-							+ result_assembly + "' WHERE idproject=" + idproject + ";");
+							+ assemblyOutput + "/CISA/cisa.fasta" + "' WHERE idproject=" + idproject + ";");
 					preparedStmt.executeUpdate();
 
 				}

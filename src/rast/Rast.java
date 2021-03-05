@@ -110,12 +110,12 @@ public class Rast {
 				if (ordination.equals("1")) {
 					String rastCommand = "perl " + "lib/svr_submit_RAST_job.pl" + " --user " + rast_user + " --passwd "
 							+ rast_pass + " --fasta " + ordered_file + " --domain " + domain + " --taxon " + taxonId
-							+ " --bioname " + bioname + " --genetic_code " + genetic_code;
+							+ " --bioname '" + bioname + "' --genetic_code " + genetic_code;
 					p = submit.exec(rastCommand);
 				} else {
 					String rastCommand = "perl " + "lib/svr_submit_RAST_job.pl" + " --user " + rast_user + " --passwd "
 							+ rast_pass + " --fasta " + result_cisa + " --domain " + domain + " --taxon " + taxonId
-							+ " --bioname " + bioname + " --genetic_code " + genetic_code;
+							+ " --bioname '" + bioname + "' --genetic_code " + genetic_code;
 					p = submit.exec(rastCommand);
 				}
 

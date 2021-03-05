@@ -6,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -26,6 +27,7 @@ import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import accent.RemoveAccent;
 import database.DatabaseConnection;
 
 public class Input {
@@ -102,14 +104,14 @@ public class Input {
 			};
 		});
 
-		JLabel lblInputRawData = new JLabel(" Input Raw Data and Reference File");
+		JLabel lblInputRawData = new JLabel(" Input Reference File and Raw Data");
 		lblInputRawData.setBounds(12, 22, 269, 15);
 		frmInput.getContentPane().add(lblInputRawData);
 
 		panel_SingleReadFileInput = new JPanel();
 		panel_SingleReadFileInput.setBorder(new TitledBorder(new LineBorder(new Color(184, 207, 229)), "Input",
 				TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
-		panel_SingleReadFileInput.setBounds(37, 49, 578, 112);
+		panel_SingleReadFileInput.setBounds(22, 185, 578, 112);
 		frmInput.getContentPane().add(panel_SingleReadFileInput);
 		panel_SingleReadFileInput.setLayout(null);
 
@@ -260,7 +262,9 @@ public class Input {
 		JButton btnEnter = new JButton("Create and Run");
 		btnEnter.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
+				RemoveAccent removeAccent = new RemoveAccent();
 				ProjectLog run = new ProjectLog();
+
 				run.setId(null);
 				try {
 					if ((getFileReadSingle() == null && getTxtNoFileSelected().getText().equals("no file selected"))
@@ -270,18 +274,34 @@ public class Input {
 						emptyDialog.setVisible(true);
 
 					} else {
+						new File(new File(getReferenceFile()).getParent()).mkdir();
+						new File(fileChooser.getSelectedFile().getAbsolutePath())
+								.renameTo(new File(getReferenceFile()));
 
 						if (getFileReadSingle() == null) {
-							connect.insertOrganism(null, getFileRead1(), getFileRead2(), getReferenceFile(), null);
+							String paread1 = getFileRead1().replaceAll("\s", "-");
+							String outputWithoutAccentParead1 = removeAccent.withoutAccent(paread1);
+							new File(getFileRead1()).renameTo(new File(outputWithoutAccentParead1));
+
+							String paread2 = getFileRead2().replaceAll("\s", "-");
+							String outputWithoutAccentParead2 = removeAccent.withoutAccent(paread2);
+							new File(getFileRead2()).renameTo(new File(outputWithoutAccentParead2));
+
+							connect.insertOrganism(null, outputWithoutAccentParead1, outputWithoutAccentParead2,
+									getReferenceFile(), null);
 						}
 
 						else {
-							connect.insertOrganism(getFileReadSingle(), null, null, getReferenceFile(), null);
+							String single = getFileReadSingle().replaceAll("\s", "-");
+							String outputWithoutAccentSingle = removeAccent.withoutAccent(single);
+							new File(getFileReadSingle()).renameTo(new File(outputWithoutAccentSingle));
+
+							connect.insertOrganism(outputWithoutAccentSingle, null, null, getReferenceFile(), null);
 
 						}
 
 						getFrame().dispose();
-
+												
 						run.openScreen();
 						new Thread(ProjectLog.t1).start();
 						new Thread(ProjectLog.t2).start();
@@ -306,7 +326,7 @@ public class Input {
 
 		JPanel panel = new JPanel();
 		panel.setBorder(new TitledBorder(null, "Reference File", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-		panel.setBounds(37, 204, 578, 82);
+		panel.setBounds(22, 64, 578, 82);
 		frmInput.getContentPane().add(panel);
 		panel.setLayout(null);
 
@@ -329,7 +349,12 @@ public class Input {
 				fileChooser.setAcceptAllFileFilterUsed(false);
 				int returnVal = fileChooser.showOpenDialog(button_ReferenceFile);
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					setReferenceFile(fileChooser.getSelectedFile().getAbsolutePath());
+					RemoveAccent removeAccent = new RemoveAccent();
+
+					String reference = fileChooser.getSelectedFile().getAbsolutePath().replaceAll("\s", "-");
+					String outputWithoutAccentRef = removeAccent.withoutAccent(reference);
+
+					setReferenceFile(outputWithoutAccentRef);
 
 					try {
 						int idproject = 0;
@@ -346,17 +371,18 @@ public class Input {
 
 						while (resultName.next()) {
 							String output = fileChooser.getSelectedFile().getParent() + "/"
-									+ resultName.getString("name").replaceAll("\s", "-");
+									+ resultName.getString("name");
+							String outputWithoutAccent = removeAccent.withoutAccent(output).replaceAll("\s", "-");
 
 							PreparedStatement preparedStmt = null;
-							preparedStmt = DatabaseConnection.connect.prepareStatement(
-									"UPDATE parameter SET output= '" + output + "' WHERE idproject=" + idproject + ";");
+							preparedStmt = DatabaseConnection.connect.prepareStatement("UPDATE parameter SET output= '"
+									+ outputWithoutAccent + "' WHERE idproject=" + idproject + ";");
 							preparedStmt.executeUpdate();
 						}
 					} catch (Exception e) {
 						System.err.println(e.getClass().getName() + ": " + e.getMessage());
 					}
-					txtNoFileSelected_reference.setText(getReferenceFile());
+					txtNoFileSelected_reference.setText(fileChooser.getSelectedFile().getAbsolutePath());
 
 				}
 
