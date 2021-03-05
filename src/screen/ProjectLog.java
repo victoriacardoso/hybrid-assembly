@@ -367,11 +367,14 @@ public class ProjectLog {
 					tools.runRast(Integer.parseInt(id), customPanel, 20);
 				} else {
 					if ((singleRead != null)) {
+						customPanel.addProgress(25);
+
 						tools.runSingleSPAdes(Integer.parseInt(id), customPanel, 25);
 
 						Thread.sleep(10000);
 
 					} else {
+						customPanel.addProgress(25);
 						tools.runPareadSPAdes(Integer.parseInt(id), customPanel, 25);
 
 						Thread.sleep(10000);
@@ -412,7 +415,7 @@ public class ProjectLog {
 					customPanel.addProgress(40);
 					tools.runCisa(Integer.parseInt(id), customPanel, 20);
 
-					Thread.sleep(10000);
+					Thread.sleep(5000);
 
 					tools.runMauve(Integer.parseInt(id), customPanel, 20);
 
@@ -475,39 +478,39 @@ public class ProjectLog {
 
 				while (resulSet.next()) {
 					order = resulSet.getString("ordination");
-				}
-				if (order.equals("1")) {
-					if (status.checkStatus(Integer.parseInt(id)).equals("Running SPAdes")
-							|| status.checkStatus(Integer.parseInt(id)).equals("Complete Megahit")) {
-						startLogProject(Integer.parseInt(id), 0, 0, 1, 2, 3);
-					}
-					if (status.checkStatus(Integer.parseInt(id)).equals("Running CISA")
-							|| status.checkStatus(Integer.parseInt(id)).equals("Complete SPAdes")) {
-						startLogProject(Integer.parseInt(id), 0, 0, 0, 1, 2);
-					}
-					if (status.checkStatus(Integer.parseInt(id)).equals("Running Mauve")
-							|| status.checkStatus(Integer.parseInt(id)).equals("Complete CISA")) {
-						startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 1);
-					}
-					if (status.checkStatus(Integer.parseInt(id)).equals("Running RAST")
-							|| status.checkStatus(Integer.parseInt(id)).equals("Complete Mauve")) {
-						startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 0);
-					}
-				} else {
-					if (status.checkStatus(Integer.parseInt(id)).equals("Running SPAdes")
-							|| status.checkStatus(Integer.parseInt(id)).equals("Complete Megahit")) {
-						startLogProject(Integer.parseInt(id), 0, 0, 1, 0, 2);
-					}
-					if (status.checkStatus(Integer.parseInt(id)).equals("Running CISA")
-							|| status.checkStatus(Integer.parseInt(id)).equals("Complete SPAdes")) {
-						startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 1);
-					}
-					if (status.checkStatus(Integer.parseInt(id)).equals("Running RAST")
-							|| status.checkStatus(Integer.parseInt(id)).equals("Complete CISA")) {
-						startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 0);
-					}
-				}
 
+					if (order.equals("1")) {
+						if (status.checkStatus(Integer.parseInt(id)).equals("Running SPAdes")
+								|| status.checkStatus(Integer.parseInt(id)).equals("Complete Megahit")) {
+							startLogProject(Integer.parseInt(id), 0, 0, 1, 2, 3);
+						}
+						if (status.checkStatus(Integer.parseInt(id)).equals("Running CISA")
+								|| status.checkStatus(Integer.parseInt(id)).equals("Complete SPAdes")) {
+							startLogProject(Integer.parseInt(id), 0, 0, 0, 1, 2);
+						}
+						if (status.checkStatus(Integer.parseInt(id)).equals("Running Mauve")
+								|| status.checkStatus(Integer.parseInt(id)).equals("Complete CISA")) {
+							startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 1);
+						}
+						if (status.checkStatus(Integer.parseInt(id)).equals("Running RAST")
+								|| status.checkStatus(Integer.parseInt(id)).equals("Complete Mauve")) {
+							startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 0);
+						}
+					} else {
+						if (status.checkStatus(Integer.parseInt(id)).equals("Running SPAdes")
+								|| status.checkStatus(Integer.parseInt(id)).equals("Complete Megahit")) {
+							startLogProject(Integer.parseInt(id), 0, 0, 1, 0, 2);
+						}
+						if (status.checkStatus(Integer.parseInt(id)).equals("Running CISA")
+								|| status.checkStatus(Integer.parseInt(id)).equals("Complete SPAdes")) {
+							startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 1);
+						}
+						if (status.checkStatus(Integer.parseInt(id)).equals("Running RAST")
+								|| status.checkStatus(Integer.parseInt(id)).equals("Complete CISA")) {
+							startLogProject(Integer.parseInt(id), 0, 0, 0, 0, 0);
+						}
+					}
+				}
 			} catch (NumberFormatException | SQLException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -524,6 +527,8 @@ public class ProjectLog {
 				panel.add(customPanel);
 				customPanel.setBounds(236, 229, 125, 96);
 
+				String order;
+
 				Rast rast = new Rast();
 				Statement statement;
 				String cmmd;
@@ -534,17 +539,32 @@ public class ProjectLog {
 
 				while (resulSet.next()) {
 					String job_id = resulSet.getString("job_id");
+					order = resulSet.getString("ordination");
 
-					if (job_id != null) {
-						customPanel.addProgress(80);
-						rast.statusRast(Integer.parseInt(id));
-						customPanel.addProgress(20);
+					if (order.equals("1")) {
+						if (job_id != null) {
+							customPanel.addProgress(80);
+							rast.statusRast(Integer.parseInt(id));
+							customPanel.addProgress(20);
+						} else {
+							customPanel.addProgress(80);
+							rast.submitRast(Integer.parseInt(id));
+							customPanel.addProgress(20);
+
+						}
 					} else {
-						customPanel.addProgress(80);
-						rast.submitRast(Integer.parseInt(id));
-						customPanel.addProgress(20);
+						if (job_id != null) {
+							customPanel.addProgress(75);
+							rast.statusRast(Integer.parseInt(id));
+							customPanel.addProgress(25);
+						} else {
+							customPanel.addProgress(75);
+							rast.submitRast(Integer.parseInt(id));
+							customPanel.addProgress(25);
 
+						}
 					}
+
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -704,7 +724,7 @@ public class ProjectLog {
 				}
 
 				tools.runCisa(idproject, customPanel, 20);
-				Thread.sleep(10000);
+				Thread.sleep(5000);
 
 				tools.runMauve(idproject, customPanel, 20);
 				Thread.sleep(10000);
@@ -730,9 +750,9 @@ public class ProjectLog {
 					Thread.sleep(10000);
 				}
 				tools.runCisa(idproject, customPanel, 25);
-				
+
 				Thread.sleep(10000);
-				
+
 				tools.runRast(idproject, customPanel, 25);
 			}
 
